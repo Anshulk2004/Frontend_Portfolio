@@ -3,7 +3,7 @@ import { PerformanceChart } from "@/components/dashboard/performance-chart"
 import { SectorAllocation } from "@/components/dashboard/sector-allocation"
 import { HoldingsTable } from "@/components/dashboard/holdings-table"
 import { RecentTransactions } from "@/components/dashboard/recent-transactions"
-import { QuarterAnalysis } from "@/components/dashboard/quarter-analysis"
+// import { QuarterAnalysis } from "@/components/dashboard/quarter-analysis"
 import { TopMovers } from "@/components/dashboard/top-movers"
 
 export default function DashboardPage() {
@@ -27,18 +27,15 @@ export default function DashboardPage() {
         <SectorAllocation />
       </div>
 
-      {/* Quarter Analysis and Top Movers */}
+      {/* Recent Transactions and Top Movers */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-        <QuarterAnalysis />
+        <RecentTransactions />
         <TopMovers />
       </div>
 
-      {/* Holdings and Transactions */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6">
-        <div className="xl:col-span-2">
-          <HoldingsTable />
-        </div>
-        <RecentTransactions />
+      {/* Holdings Table - Full Width */}
+      <div>
+        <HoldingsTable />
       </div>
     </div>
   )
