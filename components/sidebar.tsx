@@ -88,7 +88,7 @@ export function MobileSidebar() {
               <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
                 <TrendingUp className="w-5 h-5 text-accent-foreground" />
               </div>
-              <span className="font-semibold text-sidebar-foreground">PortfolioX</span>
+              <span className="font-semibold text-sidebar-foreground">Risk0</span>
             </Link>
           </div>
 
@@ -160,7 +160,7 @@ export function Sidebar() {
             <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
               <TrendingUp className="w-5 h-5 text-accent-foreground" />
             </div>
-            <span className="font-semibold text-sidebar-foreground">PortfolioX</span>
+            <span className="font-semibold text-sidebar-foreground">Risk0</span>
           </Link>
         )}
         {collapsed && (

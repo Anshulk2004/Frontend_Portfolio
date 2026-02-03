@@ -34,11 +34,8 @@ export function LiveExecutions() {
   const [executions, setExecutions] = useState<Execution[]>([])
 
   useEffect(() => {
-    // Initial executions
     const initial = Array.from({ length: 5 }, generateExecution)
     setExecutions(initial)
-
-    // Add new executions periodically
     const interval = setInterval(() => {
       setExecutions((prev) => {
         const newExecution = generateExecution()

@@ -23,7 +23,7 @@ export function QuantumCircuit() {
 
   return (
     <div className="relative w-full h-[400px] rounded-xl overflow-hidden bg-[#0a0a0f] border border-[#00f3ff]/20">
-      {/* Background grid */}
+      
       <svg className="absolute inset-0 w-full h-full opacity-20">
         <defs>
           <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
@@ -33,9 +33,7 @@ export function QuantumCircuit() {
         <rect width="100%" height="100%" fill="url(#grid)" />
       </svg>
 
-      {/* Main quantum circuit SVG */}
       <svg className="relative w-full h-full" viewBox="0 0 800 400">
-        {/* Qubit lines */}
         {[0, 1, 2, 3].map((i) => (
           <g key={i}>
             {/* Qubit line */}

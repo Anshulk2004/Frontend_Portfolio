@@ -154,7 +154,7 @@ export default function HelpPage() {
             <div className="p-4 rounded-lg bg-muted/50 text-center">
               <Mail className="w-8 h-8 text-accent mx-auto mb-2" />
               <p className="font-medium text-foreground mb-1">Email Us</p>
-              <p className="text-sm text-muted-foreground mb-3">support@portfoliox.com</p>
+              <p className="text-sm text-muted-foreground mb-3">support@risk0.com</p>
               <Button variant="outline" size="sm" className="w-full bg-transparent">
                 Send Email
               </Button>
