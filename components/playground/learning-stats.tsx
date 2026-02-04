@@ -1,54 +1,122 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Clock, BookOpen, Award, Target, Flame, Trophy } from "lucide-react"
-
-const stats = [
-  {
-    title: "Hours Learned",
-    value: "127",
-    subtitle: "This month: 24h",
-    icon: Clock,
-    color: "#4F46E5",
-  },
-  {
-    title: "Courses Completed",
-    value: "12",
-    subtitle: "3 in progress",
-    icon: BookOpen,
-    color: "#10b981",
-  },
-  {
-    title: "Certificates Earned",
-    value: "8",
-    subtitle: "2 pending",
-    icon: Award,
-    color: "#f59e0b",
-  },
-  {
-    title: "Current Streak",
-    value: "15 days",
-    subtitle: "Best: 28 days",
-    icon: Flame,
-    color: "#ef4444",
-  },
-  {
-    title: "XP Earned",
-    value: "4,850",
-    subtitle: "Level 12",
-    icon: Trophy,
-    color: "#8b5cf6",
-  },
-  {
-    title: "Goals Completed",
-    value: "8/10",
-    subtitle: "80% progress",
-    icon: Target,
-    color: "#06b6d4",
-  },
-]
+import { useCourses } from "./courses-context"
 
 export function LearningStats() {
+  const { userCourses } = useCourses()
+  const [stats, setStats] = useState([
+    {
+      title: "Hours Learned",
+      value: "0",
+      subtitle: "This month: 0h",
+      icon: Clock,
+      color: "#4F46E5",
+    },
+    {
+      title: "Courses Completed",
+      value: "0",
+      subtitle: "0 in progress",
+      icon: BookOpen,
+      color: "#10b981",
+    },
+    {
+      title: "Certificates Earned",
+      value: "0",
+      subtitle: "0 pending",
+      icon: Award,
+      color: "#f59e0b",
+    },
+    {
+      title: "Current Streak",
+      value: "0 days",
+      subtitle: "Best: 0 days",
+      icon: Flame,
+      color: "#ef4444",
+    },
+    {
+      title: "XP Earned",
+      value: "0",
+      subtitle: "Level 1",
+      icon: Trophy,
+      color: "#8b5cf6",
+    },
+    {
+      title: "Goals Completed",
+      value: "0/0",
+      subtitle: "0% progress",
+      icon: Target,
+      color: "#06b6d4",
+    },
+  ])
+
+  useEffect(() => {
+    // Calculate stats from user courses
+    const totalCourses = userCourses.length
+    const completedCourses = userCourses.filter(uc => uc.progress === 100).length
+    const inProgressCourses = totalCourses - completedCourses
+    
+    // Calculate total hours based on course durations
+    const totalHours = userCourses.reduce((acc, uc) => {
+      const duration = uc.course.duration
+      if (!duration) return acc
+      const hours = parseFloat(duration.match(/\d+/)?.[0] || "0")
+      const completionRatio = uc.progress / 100
+      return acc + (hours * completionRatio)
+    }, 0)
+
+    // Calculate XP based on progress
+    const totalXP = userCourses.reduce((acc, uc) => {
+      return acc + (uc.progress * 10) + (uc.completedLessons * 50)
+    }, 0)
+    const level = Math.floor(totalXP / 1000) + 1
+
+    // Calculate goals progress
+    const totalGoals = totalCourses
+    const completedGoals = completedCourses
+    const goalsProgress = totalGoals > 0 ? Math.floor((completedGoals / totalGoals) * 100) : 0
+
+    setStats([
+      {
+        title: "Hours Learned",
+        value: Math.floor(totalHours).toString(),
+        subtitle: `This month: ${Math.floor(totalHours * 0.3)}h`,
+        icon: Clock,
+        color: "#4F46E5",
+      },
+      {
+        title: "Courses Completed",
+        value: completedCourses.toString(),
+        subtitle: `${inProgressCourses} in progress`,
+        icon: BookOpen,
+        color: "#10b981",
+      },
+      {
+        title: "Certificates Earned",
+        value: completedCourses.toString(),
+        subtitle: `${inProgressCourses} pending`,
+        icon: Award,
+        color: "#f59e0b",
+      },
+      {
+        title: "XP Earned",
+        value: Math.floor(totalXP).toLocaleString(),
+        subtitle: `Level ${level}`,
+        icon: Trophy,
+        color: "#8b5cf6",
+      },
+      {
+        title: "Goals Completed",
+        value: `${completedGoals}/${totalGoals}`,
+        subtitle: `${goalsProgress}% progress`,
+        icon: Target,
+        color: "#06b6d4",
+      },
+    ])
+  }, [userCourses])
+
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
       {stats.map((stat) => (

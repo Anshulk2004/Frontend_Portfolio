@@ -1,9 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -13,42 +12,62 @@ import {
   BarChart3,
   Shield,
   Plus,
-  Star,
-  Clock,
-  Users,
-  Check,
-  Play
 } from "lucide-react"
-import { useCourses, type Course } from "./courses-context"
+import { useCourses } from "./courses-context"
 
 const categories = [
-  { name: "Stock Trading", icon: TrendingUp, color: "#4F46E5", count: 2 },
-  { name: "Portfolio Management", icon: PiggyBank, color: "#10b981", count: 2 },
-  { name: "Technical Analysis", icon: BarChart3, color: "#f59e0b", count: 1 },
-  { name: "Risk Management", icon: Shield, color: "#ef4444", count: 1 },
+  { name: "Stock Trading", icon: TrendingUp, color: "#4F46E5" },
+  { name: "Portfolio Management", icon: PiggyBank, color: "#10b981" },
+  { name: "Technical Analysis", icon: BarChart3, color: "#f59e0b" },
+  { name: "Risk Management", icon: Shield, color: "#ef4444" },
 ]
 
 export function CourseCategories() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
-  const { addCourseToDB, enrollCourse, isEnrolled, playCourse } = useCourses()
+  const { addCourseToDB, fetchCourses, courses } = useCourses()
+  const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({})
   
-  // State for the "Add Course" form (Matches your Backend structure)
+  // State for the "Add Course" form
   const [newCourse, setNewCourse] = useState({
     title: "",
     instructor: "",
     description: "",
     duration: "",
-    price: "",
+    price: 0,
     category: "Stock Trading",
-    image: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400&h=250&fit=crop"
+    imageUrl: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400&h=250&fit=crop",
+    rating: 0,
+    studentsCount: 0
   })
 
-  const handleAddCourse = (e: React.FormEvent) => {
+  useEffect(() => {
+    // Calculate category counts from courses
+    const counts: Record<string, number> = {}
+    categories.forEach(cat => {
+      counts[cat.name] = courses.filter(c => c.category === cat.name).length
+    })
+    setCategoryCounts(counts)
+  }, [courses])
+
+  const handleAddCourse = async (e: React.FormEvent) => {
     e.preventDefault()
-    addCourseToDB(newCourse)
+    await addCourseToDB(newCourse)
     setIsAddModalOpen(false)
     // Reset form
-    setNewCourse({ ...newCourse, title: "", instructor: "", description: "", duration: "", price: "" })
+    setNewCourse({ 
+      ...newCourse, 
+      title: "", 
+      instructor: "", 
+      description: "", 
+      duration: "", 
+      price: 0,
+      rating: 0,
+      studentsCount: 0
+    })
+  }
+
+  const handleCategoryClick = (categoryName: string) => {
+    fetchCourses(categoryName)
   }
 
   return (
@@ -87,9 +106,25 @@ export function CourseCategories() {
                   onChange={(e) => setNewCourse({...newCourse, duration: e.target.value})}
                 />
                 <Input 
-                  placeholder="Price (e.g. Rs. 2999)" 
-                  value={newCourse.price}
-                  onChange={(e) => setNewCourse({...newCourse, price: e.target.value})}
+                  type="number"
+                  placeholder="Price (e.g. 2999)" 
+                  value={newCourse.price || ""}
+                  onChange={(e) => setNewCourse({...newCourse, price: Number(e.target.value)})}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Input 
+                  type="number"
+                  step="0.1"
+                  placeholder="Rating (e.g. 4.5)" 
+                  value={newCourse.rating || ""}
+                  onChange={(e) => setNewCourse({...newCourse, rating: Number(e.target.value)})}
+                />
+                <Input 
+                  type="number"
+                  placeholder="Students (e.g. 1000)" 
+                  value={newCourse.studentsCount || ""}
+                  onChange={(e) => setNewCourse({...newCourse, studentsCount: Number(e.target.value)})}
                 />
               </div>
               <select 
@@ -99,6 +134,11 @@ export function CourseCategories() {
               >
                 {categories.map(cat => <option key={cat.name} value={cat.name}>{cat.name}</option>)}
               </select>
+              <Input 
+                placeholder="Image URL" 
+                value={newCourse.imageUrl}
+                onChange={(e) => setNewCourse({...newCourse, imageUrl: e.target.value})}
+              />
               <Textarea 
                 placeholder="Course Description" 
                 value={newCourse.description}
@@ -116,6 +156,7 @@ export function CourseCategories() {
           <Card
             key={category.name}
             className="bg-card border-border hover:border-accent/50 transition-all cursor-pointer group"
+            onClick={() => handleCategoryClick(category.name)}
           >
             <CardContent className="p-4 text-center">
               <div
@@ -127,7 +168,9 @@ export function CourseCategories() {
               <p className="font-medium text-foreground text-sm leading-tight mb-1">
                 {category.name}
               </p>
-              <p className="text-xs text-muted-foreground">{category.count} courses</p>
+              <p className="text-xs text-muted-foreground">
+                {categoryCounts[category.name] || 0} courses
+              </p>
             </CardContent>
           </Card>
         ))}
