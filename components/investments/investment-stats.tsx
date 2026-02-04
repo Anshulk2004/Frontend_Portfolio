@@ -7,6 +7,7 @@ import {
   IndianRupee,
   ArrowUpRight,
   ArrowDownRight,
+  Landmark
 } from "lucide-react"
 
 interface InvestmentStatsProps {
@@ -53,14 +54,22 @@ export function InvestmentStats({ totalInvested, totalReturns, returnsPercentage
       icon: ArrowUpRight,
       description: "Profit earned",
     },
+    // {
+    //   title: "Net Loss",
+    //   value: formatINR(netLoss),
+    //   change: netLoss > 0 ? `-${formatINR(netLoss)}` : formatINR(0),
+    //   trend: "down",
+    //   icon: ArrowDownRight,
+    //   description: "Total losses",
+    // },
     {
-      title: "Net Loss",
-      value: formatINR(netLoss),
-      change: netLoss > 0 ? `-${formatINR(netLoss)}` : formatINR(0),
-      trend: "down",
-      icon: ArrowDownRight,
-      description: "Total losses",
-    },
+  title: "Asset Diversification",
+  value: "82/100",
+  change: "Healthy Mix",
+  trend: "up", 
+  icon: Landmark, 
+  description: "Asset spread score",
+},
   ]
 
   return (
