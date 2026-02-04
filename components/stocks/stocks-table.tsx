@@ -10,7 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { TrendingUp, TrendingDown, Star, StarOff, ChevronLeft, ChevronRight, MoreHorizontal, ShoppingCart, Eye, Plus, Minus } from "lucide-react"
+import { Star, StarOff, ChevronLeft, ChevronRight, MoreHorizontal, ShoppingCart, Eye, Plus, Minus } from "lucide-react"
 import { useState } from "react"
 import {
   DropdownMenu,
@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useWatchlist } from "@/contexts/watchlist-context"
 
 interface Stock {
   symbol: string
@@ -38,33 +39,30 @@ interface Stock {
   volume: string
   marketCap: string
   pe: number
-  watched: boolean
   openPrice: number
   closePrice: number
 }
 
 const stocks: Stock[] = [
-  { symbol: "RELIANCE.NS", name: "Reliance Industries", sector: "Oil & Gas", price: 2485.75, change: 1.33, volume: "8.2M", marketCap: "Rs. 16.8L Cr", pe: 28.5, watched: true, openPrice: 2465.00, closePrice: 2478.50 },
-  { symbol: "TCS.NS", name: "Tata Consultancy Services", sector: "IT Services", price: 3892.40, change: -1.15, volume: "2.4M", marketCap: "Rs. 14.2L Cr", pe: 32.1, watched: true, openPrice: 3920.00, closePrice: 3905.80 },
-  { symbol: "HDFCBANK.NS", name: "HDFC Bank", sector: "Banking", price: 1678.90, change: 1.13, volume: "5.8M", marketCap: "Rs. 12.8L Cr", pe: 19.8, watched: false, openPrice: 1665.00, closePrice: 1672.30 },
-  { symbol: "INFY.NS", name: "Infosys", sector: "IT Services", price: 1542.35, change: -1.46, volume: "6.2M", marketCap: "Rs. 6.4L Cr", pe: 24.5, watched: true, openPrice: 1560.00, closePrice: 1555.20 },
-  { symbol: "ICICIBANK.NS", name: "ICICI Bank", sector: "Banking", price: 1125.60, change: 1.39, volume: "9.8M", marketCap: "Rs. 7.9L Cr", pe: 18.2, watched: false, openPrice: 1112.00, closePrice: 1118.40 },
-  { symbol: "BHARTIARTL.NS", name: "Bharti Airtel", sector: "Telecom", price: 1456.25, change: 2.02, volume: "4.5M", marketCap: "Rs. 8.7L Cr", pe: 42.3, watched: true, openPrice: 1430.00, closePrice: 1445.80 },
-  { symbol: "SBIN.NS", name: "State Bank of India", sector: "Banking", price: 825.40, change: 0.85, volume: "12.5M", marketCap: "Rs. 7.4L Cr", pe: 11.2, watched: false, openPrice: 820.00, closePrice: 822.50 },
-  { symbol: "KOTAKBANK.NS", name: "Kotak Mahindra Bank", sector: "Banking", price: 1842.75, change: -0.92, volume: "1.8M", marketCap: "Rs. 3.7L Cr", pe: 22.8, watched: false, openPrice: 1855.00, closePrice: 1850.20 },
-  { symbol: "LT.NS", name: "Larsen & Toubro", sector: "Infrastructure", price: 3425.60, change: 1.75, volume: "1.2M", marketCap: "Rs. 4.7L Cr", pe: 35.6, watched: false, openPrice: 3380.00, closePrice: 3400.40 },
-  { symbol: "WIPRO.NS", name: "Wipro", sector: "IT Services", price: 485.20, change: -2.15, volume: "5.6M", marketCap: "Rs. 2.5L Cr", pe: 18.5, watched: false, openPrice: 495.00, closePrice: 492.30 },
-  { symbol: "TATAMOTORS.NS", name: "Tata Motors", sector: "Auto", price: 985.40, change: 3.25, volume: "15.2M", marketCap: "Rs. 3.6L Cr", pe: 8.5, watched: true, openPrice: 958.00, closePrice: 972.50 },
-  { symbol: "MARUTI.NS", name: "Maruti Suzuki", sector: "Auto", price: 12450.80, change: 0.95, volume: "0.8M", marketCap: "Rs. 3.9L Cr", pe: 28.2, watched: false, openPrice: 12380.00, closePrice: 12420.60 },
-  { symbol: "ADANIENT.NS", name: "Adani Enterprises", sector: "Conglomerate", price: 2845.75, change: 4.52, volume: "3.5M", marketCap: "Rs. 3.2L Cr", pe: 85.4, watched: false, openPrice: 2750.00, closePrice: 2780.20 },
-  { symbol: "SUNPHARMA.NS", name: "Sun Pharma", sector: "Pharma", price: 1685.40, change: 1.28, volume: "2.1M", marketCap: "Rs. 4.0L Cr", pe: 35.2, watched: false, openPrice: 1668.00, closePrice: 1675.80 },
-  { symbol: "TITAN.NS", name: "Titan Company", sector: "Consumer", price: 3542.60, change: -0.75, volume: "1.5M", marketCap: "Rs. 3.1L Cr", pe: 82.5, watched: false, openPrice: 3565.00, closePrice: 3558.20 },
+  { symbol: "RELIANCE.NS", name: "Reliance Industries", sector: "Oil & Gas", price: 2485.75, change: 1.33, volume: "8.2M", marketCap: "Rs. 16.8L Cr", pe: 28.5, openPrice: 2465.00, closePrice: 2478.50 },
+  { symbol: "TCS.NS", name: "Tata Consultancy Services", sector: "IT Services", price: 3892.40, change: -1.15, volume: "2.4M", marketCap: "Rs. 14.2L Cr", pe: 32.1, openPrice: 3920.00, closePrice: 3905.80 },
+  { symbol: "HDFCBANK.NS", name: "HDFC Bank", sector: "Banking", price: 1678.90, change: 1.13, volume: "5.8M", marketCap: "Rs. 12.8L Cr", pe: 19.8, openPrice: 1665.00, closePrice: 1672.30 },
+  { symbol: "INFY.NS", name: "Infosys", sector: "IT Services", price: 1542.35, change: -1.46, volume: "6.2M", marketCap: "Rs. 6.4L Cr", pe: 24.5, openPrice: 1560.00, closePrice: 1555.20 },
+  { symbol: "ICICIBANK.NS", name: "ICICI Bank", sector: "Banking", price: 1125.60, change: 1.39, volume: "9.8M", marketCap: "Rs. 7.9L Cr", pe: 18.2, openPrice: 1112.00, closePrice: 1118.40 },
+  { symbol: "BHARTIARTL.NS", name: "Bharti Airtel", sector: "Telecom", price: 1456.25, change: 2.02, volume: "4.5M", marketCap: "Rs. 8.7L Cr", pe: 42.3, openPrice: 1430.00, closePrice: 1445.80 },
+  { symbol: "SBIN.NS", name: "State Bank of India", sector: "Banking", price: 825.40, change: 0.85, volume: "12.5M", marketCap: "Rs. 7.4L Cr", pe: 11.2, openPrice: 820.00, closePrice: 822.50 },
+  { symbol: "KOTAKBANK.NS", name: "Kotak Mahindra Bank", sector: "Banking", price: 1842.75, change: -0.92, volume: "1.8M", marketCap: "Rs. 3.7L Cr", pe: 22.8, openPrice: 1855.00, closePrice: 1850.20 },
+  { symbol: "LT.NS", name: "Larsen & Toubro", sector: "Infrastructure", price: 3425.60, change: 1.75, volume: "1.2M", marketCap: "Rs. 4.7L Cr", pe: 35.6, openPrice: 3380.00, closePrice: 3400.40 },
+  { symbol: "WIPRO.NS", name: "Wipro", sector: "IT Services", price: 485.20, change: -2.15, volume: "5.6M", marketCap: "Rs. 2.5L Cr", pe: 18.5, openPrice: 495.00, closePrice: 492.30 },
+  { symbol: "TATAMOTORS.NS", name: "Tata Motors", sector: "Auto", price: 985.40, change: 3.25, volume: "15.2M", marketCap: "Rs. 3.6L Cr", pe: 8.5, openPrice: 958.00, closePrice: 972.50 },
+  { symbol: "MARUTI.NS", name: "Maruti Suzuki", sector: "Auto", price: 12450.80, change: 0.95, volume: "0.8M", marketCap: "Rs. 3.9L Cr", pe: 28.2, openPrice: 12380.00, closePrice: 12420.60 },
+  { symbol: "ADANIENT.NS", name: "Adani Enterprises", sector: "Conglomerate", price: 2845.75, change: 4.52, volume: "3.5M", marketCap: "Rs. 3.2L Cr", pe: 85.4, openPrice: 2750.00, closePrice: 2780.20 },
+  { symbol: "SUNPHARMA.NS", name: "Sun Pharma", sector: "Pharma", price: 1685.40, change: 1.28, volume: "2.1M", marketCap: "Rs. 4.0L Cr", pe: 35.2, openPrice: 1668.00, closePrice: 1675.80 },
+  { symbol: "TITAN.NS", name: "Titan Company", sector: "Consumer", price: 3542.60, change: -0.75, volume: "1.5M", marketCap: "Rs. 3.1L Cr", pe: 82.5, openPrice: 3565.00, closePrice: 3558.20 },
 ]
 
 export function StocksTable() {
-  const [watchlist, setWatchlist] = useState<string[]>(
-    stocks.filter(s => s.watched).map(s => s.symbol)
-  )
+  const { addToWatchlist, removeFromWatchlist, isInWatchlist } = useWatchlist()
   const [currentPage, setCurrentPage] = useState(1)
   const [buyDialogOpen, setBuyDialogOpen] = useState(false)
   const [viewDialogOpen, setViewDialogOpen] = useState(false)
@@ -74,12 +72,17 @@ export function StocksTable() {
   const itemsPerPage = 5
   const totalPages = Math.ceil(stocks.length / itemsPerPage)
 
-  const toggleWatchlist = (symbol: string) => {
-    setWatchlist(prev =>
-      prev.includes(symbol)
-        ? prev.filter(s => s !== symbol)
-        : [...prev, symbol]
-    )
+  const toggleWatchlist = (stock: Stock) => {
+    if (isInWatchlist(stock.symbol)) {
+      removeFromWatchlist(stock.symbol)
+    } else {
+      addToWatchlist({
+        symbol: stock.symbol,
+        name: stock.name,
+        price: stock.price,
+        change: stock.change
+      })
+    }
   }
 
   const paginatedStocks = stocks.slice(
@@ -99,7 +102,6 @@ export function StocksTable() {
   }
 
   const confirmBuy = () => {
-    // This would connect to backend later
     setBuyDialogOpen(false)
     setBuyQuantity("")
   }
@@ -131,7 +133,6 @@ export function StocksTable() {
                   <TableHead className="text-muted-foreground">Symbol</TableHead>
                   <TableHead className="text-muted-foreground">Sector</TableHead>
                   <TableHead className="text-muted-foreground text-right">Price</TableHead>
-                  <TableHead className="text-muted-foreground text-right">Change</TableHead>
                   <TableHead className="text-muted-foreground text-right">Volume</TableHead>
                   <TableHead className="text-muted-foreground text-right">Market Cap</TableHead>
                   <TableHead className="text-muted-foreground text-right">P/E</TableHead>
@@ -146,9 +147,9 @@ export function StocksTable() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => toggleWatchlist(stock.symbol)}
+                        onClick={() => toggleWatchlist(stock)}
                       >
-                        {watchlist.includes(stock.symbol) ? (
+                        {isInWatchlist(stock.symbol) ? (
                           <Star className="w-4 h-4 fill-warning text-warning" />
                         ) : (
                           <StarOff className="w-4 h-4 text-muted-foreground" />
@@ -168,18 +169,6 @@ export function StocksTable() {
                     </TableCell>
                     <TableCell className="text-right font-medium text-foreground">
                       {formatINR(stock.price)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className={`flex items-center justify-end gap-1 ${
-                        stock.change >= 0 ? "text-success" : "text-destructive"
-                      }`}>
-                        {stock.change >= 0 ? (
-                          <TrendingUp className="w-4 h-4" />
-                        ) : (
-                          <TrendingDown className="w-4 h-4" />
-                        )}
-                        {stock.change >= 0 ? "+" : ""}{stock.change}%
-                      </div>
                     </TableCell>
                     <TableCell className="text-right text-muted-foreground">{stock.volume}</TableCell>
                     <TableCell className="text-right text-muted-foreground">{stock.marketCap}</TableCell>

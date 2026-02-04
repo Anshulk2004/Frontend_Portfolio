@@ -8,7 +8,7 @@ import { PerformanceChart } from "@/components/dashboard/performance-chart"
 import { SectorAllocation } from "@/components/dashboard/sector-allocation"
 import { HoldingsTable } from "@/components/dashboard/holdings-table"
 import { RecentTransactions } from "@/components/dashboard/recent-transactions"
-import { QuarterAnalysis } from "@/components/dashboard/quarter-analysis"
+// import { QuarterAnalysis } from "@/components/dashboard/quarter-analysis"
 import { TopMovers } from "@/components/dashboard/top-movers"
 
 interface Holding {
@@ -101,18 +101,15 @@ export default function DashboardPage() {
         <SectorAllocation sectorData={sectorAllocation} totalValue={totalCurrentValue} />
       </div>
 
-      {/* Quarter Analysis and Top Movers */}
+      {/* Recent Transactions and Top Movers */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-        <QuarterAnalysis holdings={holdings} />
-        <TopMovers holdings={todayHoldings} />
+        <RecentTransactions />
+        <TopMovers />
       </div>
 
-      {/* Holdings and Transactions */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6">
-        <div className="xl:col-span-2">
-          <HoldingsTable holdings={todayHoldings} onRefresh={fetchHoldings} />
-        </div>
-        <RecentTransactions holdings={holdings} />
+      {/* Holdings Table - Full Width */}
+      <div>
+        <HoldingsTable holdings={todayHoldings} onRefresh={fetchHoldings} />
       </div>
     </div>
   )
