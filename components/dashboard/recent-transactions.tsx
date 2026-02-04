@@ -1,78 +1,53 @@
 "use client"
 
+import { useEffect, useState } from "react"
+import axios from "axios"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowUpRight, ArrowDownRight } from "lucide-react"
+import { ArrowUpRight, ArrowDownRight, Loader2 } from "lucide-react"
 
-interface Holding {
+interface Transaction {
   id: number
+  user?: {
+    id: number
+  }
   symbol: string
-  companyName: string
-  sector: string
-  currentPrice: number
-  timePeriod: string
+  transactionType: "BUY" | "SELL"
   quantity: number
-  totalInvested: number
-  acquiredPrice?: number
-  acquiredDate: string
-  updatedAt: string
+  price: number
+  totalAmount: number
+  transactionDate: string
 }
 
 interface RecentTransactionsProps {
-  holdings?: Holding[]
+  holdings?: any[]
 }
 
-const transactions = [
-  {
-    type: "buy",
-    symbol: "RELIANCE.NS",
-    shares: 10,
-    price: 2485.75,
-    total: 24857.50,
-    date: "2 hours ago",
-  },
-  {
-    type: "sell",
-    symbol: "TATAMOTORS.NS",
-    shares: 25,
-    price: 985.40,
-    total: 24635.00,
-    date: "5 hours ago",
-  },
-  {
-    type: "buy",
-    symbol: "TCS.NS",
-    shares: 5,
-    price: 3892.40,
-    total: 19462.00,
-    date: "1 day ago",
-  },
-  {
-    type: "buy",
-    symbol: "HDFCBANK.NS",
-    shares: 15,
-    price: 1678.90,
-    total: 25183.50,
-    date: "2 days ago",
-  },
-  {
-    type: "sell",
-    symbol: "WIPRO.NS",
-    shares: 50,
-    price: 485.60,
-    total: 24280.00,
-    date: "3 days ago",
-  },
-  {
-    type: "buy",
-    symbol: "INFY.NS",
-    shares: 20,
-    price: 1542.35,
-    total: 30847.00,
-    date: "4 days ago",
-  },
-]
-
 export function RecentTransactions({ holdings }: RecentTransactionsProps) {
+  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchTransactions()
+  }, [])
+
+  const fetchTransactions = async () => {
+    try {
+      setLoading(true)
+      const response = await axios.get("http://localhost:8080/api/transactions")
+      // Sort by date descending and take first 6
+      const sortedTransactions = response.data
+        .sort((a: Transaction, b: Transaction) => 
+          new Date(b.transactionDate).getTime() - new Date(a.transactionDate).getTime()
+        )
+        .slice(0, 6)
+      setTransactions(sortedTransactions)
+    } catch (error) {
+      console.error("Failed to fetch transactions:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const formatINR = (value: number) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -82,52 +57,80 @@ export function RecentTransactions({ holdings }: RecentTransactionsProps) {
     }).format(value).replace('₹', 'Rs. ')
   }
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+
+    if (diffMins < 60) {
+      return `${diffMins} ${diffMins === 1 ? 'minute' : 'minutes'} ago`
+    } else if (diffHours < 24) {
+      return `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`
+    } else if (diffDays < 7) {
+      return `${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`
+    } else {
+      return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+    }
+  }
   return (
     <Card className="bg-card border-border">
       <CardHeader className="pb-2">
         <CardTitle className="text-lg font-semibold text-foreground">Recent Transactions</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {transactions.map((transaction, index) => (
-            <div
-              key={index}
-              className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    transaction.type === "buy"
-                      ? "bg-success/10 text-success"
-                      : "bg-destructive/10 text-destructive"
-                  }`}
-                >
-                  {transaction.type === "buy" ? (
-                    <ArrowDownRight className="w-5 h-5" />
-                  ) : (
-                    <ArrowUpRight className="w-5 h-5" />
-                  )}
+        {loading ? (
+          <div className="flex items-center justify-center h-48">
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : transactions.length === 0 ? (
+          <div className="flex items-center justify-center h-48 text-muted-foreground">
+            No transactions yet
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {transactions.map((transaction) => (
+              <div
+                key={transaction.id}
+                className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                      transaction.transactionType === "BUY"
+                        ? "bg-success/10 text-success"
+                        : "bg-destructive/10 text-destructive"
+                    }`}
+                  >
+                    {transaction.transactionType === "BUY" ? (
+                      <ArrowDownRight className="w-5 h-5" />
+                    ) : (
+                      <ArrowUpRight className="w-5 h-5" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground">
+                      {transaction.transactionType === "BUY" ? "Bought" : "Sold"} {transaction.symbol.replace('.NS', '')}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {transaction.quantity} shares @ {formatINR(transaction.price)}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-medium text-foreground">
-                    {transaction.type === "buy" ? "Bought" : "Sold"} {transaction.symbol.replace('.NS', '')}
+                <div className="text-right">
+                  <p className={`font-semibold ${
+                    transaction.transactionType === "BUY" ? "text-foreground" : "text-success"
+                  }`}>
+                    {transaction.transactionType === "BUY" ? "-" : "+"}{formatINR(transaction.totalAmount)}
                   </p>
-                  <p className="text-sm text-muted-foreground">
-                    {transaction.shares} shares @ {formatINR(transaction.price)}
-                  </p>
+                  <p className="text-sm text-muted-foreground">{formatDate(transaction.transactionDate)}</p>
                 </div>
               </div>
-              <div className="text-right">
-                <p className={`font-semibold ${
-                  transaction.type === "buy" ? "text-foreground" : "text-success"
-                }`}>
-                  {transaction.type === "buy" ? "-" : "+"}{formatINR(transaction.total)}
-                </p>
-                <p className="text-sm text-muted-foreground">{transaction.date}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   )

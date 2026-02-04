@@ -17,6 +17,9 @@ import {
 
 interface Holding {
   id: number
+  user?: {
+    id: number
+  }
   symbol: string
   companyName: string
   sector: string

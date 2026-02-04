@@ -361,6 +361,7 @@
 "use client"
 
 import { useState } from "react"
+import axios from "axios"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Table,
@@ -388,9 +389,13 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useToast } from "@/hooks/use-toast"
 
 interface Holding {
   id: number
+  user?: {
+    id: number
+  }
   symbol: string
   companyName: string
   sector: string
@@ -409,10 +414,13 @@ interface HoldingsTableProps {
 }
 
 export function HoldingsTable({ holdings, onRefresh }: HoldingsTableProps) {
+  const { toast } = useToast()
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [sellDialogOpen, setSellDialogOpen] = useState(false)
   const [selectedHolding, setSelectedHolding] = useState<Holding | null>(null)
   const [buyQuantity, setBuyQuantity] = useState("")
+  const [selling, setSelling] = useState(false)
+  const [buying, setBuying] = useState(false)
 
   const handleEdit = (holding: Holding) => {
     setSelectedHolding(holding)
@@ -425,26 +433,93 @@ export function HoldingsTable({ holdings, onRefresh }: HoldingsTableProps) {
     setSellDialogOpen(true)
   }
 
-  const confirmBuyMore = () => {
-    if (selectedHolding && buyQuantity) {
-      const qty = parseInt(buyQuantity)
-      if (qty > 0) {
-        // TODO: Implement API call to buy more shares
-        console.log(`Buying ${qty} more shares of ${selectedHolding.symbol}`)
+  const confirmBuyMore = async () => {
+    if (!selectedHolding || !buyQuantity) return
+
+    const qty = parseInt(buyQuantity)
+    if (qty <= 0) return
+
+    try {
+      setBuying(true)
+      
+      // Calculate new values
+      const newQuantity = selectedHolding.quantity + qty
+      const additionalInvestment = selectedHolding.currentPrice * qty
+      const newTotalInvested = selectedHolding.totalInvested + additionalInvestment
+
+      // Prepare updated holding object - send only the necessary fields
+      const updatedHolding = {
+        id: selectedHolding.id,
+        user: selectedHolding.user ? { id: selectedHolding.user.id } : null,
+        symbol: selectedHolding.symbol,
+        companyName: selectedHolding.companyName,
+        sector: selectedHolding.sector,
+        currentPrice: Number(selectedHolding.currentPrice),
+        acquiredPrice: selectedHolding.acquiredPrice ? Number(selectedHolding.acquiredPrice) : null,
+        timePeriod: selectedHolding.timePeriod,
+        quantity: newQuantity,
+        totalInvested: Number(newTotalInvested.toFixed(2)),
+        acquiredDate: selectedHolding.acquiredDate,
       }
+
+      // Call PUT API
+      await axios.put(`http://localhost:8080/api/holdings/${selectedHolding.id}`, updatedHolding)
+      
+      // Create transaction record
+      await axios.post("http://localhost:8080/api/transactions", {
+        user: selectedHolding.user ? { id: selectedHolding.user.id } : null,
+        symbol: selectedHolding.symbol,
+        transactionType: "BUY",
+        quantity: qty,
+        price: Number(selectedHolding.currentPrice),
+        totalAmount: Number(additionalInvestment.toFixed(2)),
+        transactionDate: new Date().toISOString()
+      })
+      
+      toast({
+        title: "Success",
+        description: `Successfully bought ${qty} more shares of ${selectedHolding.companyName}`,
+      })
+      
+      setEditDialogOpen(false)
+      setBuyQuantity("")
+    } catch (error) {
+      console.error("Failed to buy more shares:", error)
+      toast({
+        title: "Error",
+        description: "Failed to buy shares. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setBuying(false)
+      onRefresh() // Always refresh to get updated data from DB
     }
-    setEditDialogOpen(false)
-    setBuyQuantity("")
-    onRefresh()
   }
 
-  const confirmSell = () => {
-    if (selectedHolding) {
-      // TODO: Implement API call to sell shares
-      console.log(`Selling all shares of ${selectedHolding.symbol}`)
+  const confirmSell = async () => {
+    if (!selectedHolding) return
+
+    try {
+      setSelling(true)
+      await axios.delete(`http://localhost:8080/api/holdings/${selectedHolding.id}`)
+      
+      toast({
+        title: "Success",
+        description: `Successfully sold all shares of ${selectedHolding.companyName}`,
+      })
+      
+      setSellDialogOpen(false)
+      onRefresh() // Refresh to update all calculations
+    } catch (error) {
+      console.error("Failed to sell holding:", error)
+      toast({
+        title: "Error",
+        description: "Failed to sell shares. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setSelling(false)
     }
-    setSellDialogOpen(false)
-    onRefresh()
   }
 
   const calculatePnL = (holding: Holding) => {
@@ -479,8 +554,8 @@ export function HoldingsTable({ holdings, onRefresh }: HoldingsTableProps) {
                 <TableRow className="border-border">
                   <TableHead className="text-muted-foreground">Company</TableHead>
                   <TableHead className="text-muted-foreground text-right">Qty</TableHead>
-                  <TableHead className="text-muted-foreground text-right">Avg Price</TableHead>
-                  <TableHead className="text-muted-foreground text-right">LTP</TableHead>
+                  <TableHead className="text-muted-foreground text-right">Acquired Price</TableHead>
+                  <TableHead className="text-muted-foreground text-right">Current Price</TableHead>
                   <TableHead className="text-muted-foreground text-right">Change</TableHead>
                   <TableHead className="text-muted-foreground text-right">Value</TableHead>
                   <TableHead className="text-muted-foreground text-right">Actions</TableHead>
@@ -488,7 +563,7 @@ export function HoldingsTable({ holdings, onRefresh }: HoldingsTableProps) {
               </TableHeader>
               <TableBody>
                 {holdings.map((holding) => {
-                  const avgPrice = holding.totalInvested / holding.quantity
+                  const acquiredPrice = holding.acquiredPrice ?? (holding.totalInvested / holding.quantity)
                   const currentValue = holding.currentPrice * holding.quantity
                   const { pnl, pnlPercentage } = calculatePnL(holding)
                   
@@ -502,7 +577,7 @@ export function HoldingsTable({ holdings, onRefresh }: HoldingsTableProps) {
                     </TableCell>
                     <TableCell className="text-right text-foreground">{holding.quantity}</TableCell>
                     <TableCell className="text-right text-foreground">
-                      {formatINR(avgPrice)}
+                      {formatINR(acquiredPrice)}
                     </TableCell>
                     <TableCell className="text-right text-foreground">
                       {formatINR(holding.currentPrice)}
@@ -619,13 +694,15 @@ export function HoldingsTable({ holdings, onRefresh }: HoldingsTableProps) {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)} disabled={buying}>
+              Cancel
+            </Button>
             <Button 
               onClick={confirmBuyMore}
-              disabled={!buyQuantity || parseInt(buyQuantity) <= 0}
+              disabled={!buyQuantity || parseInt(buyQuantity) <= 0 || buying}
               className="bg-accent text-accent-foreground"
             >
-              Confirm Buy
+              {buying ? "Buying..." : "Confirm Buy"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -657,12 +734,15 @@ export function HoldingsTable({ holdings, onRefresh }: HoldingsTableProps) {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setSellDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setSellDialogOpen(false)} disabled={selling}>
+              Cancel
+            </Button>
             <Button 
               onClick={confirmSell}
               variant="destructive"
+              disabled={selling}
             >
-              Confirm Sell
+              {selling ? "Selling..." : "Confirm Sell"}
             </Button>
           </DialogFooter>
         </DialogContent>
