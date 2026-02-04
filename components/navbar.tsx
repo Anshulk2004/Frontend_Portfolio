@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Bell, Moon, Sun, TrendingUp, Calendar } from "lucide-react"
+import axios from "axios"
+import { Bell, Moon, Sun, TrendingUp, Calendar, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -26,16 +27,111 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useToast } from "@/hooks/use-toast"
+
+interface UserData {
+  id: number
+  email: string
+  password: string
+  firstName: string
+  lastName: string
+  panNumber: string
+  phoneNumber: string
+  createdAt: string
+  updatedAt: string
+}
 
 export function Navbar() {
   const { setTheme, resolvedTheme } = useTheme()
+  const { toast } = useToast()
   const [mounted, setMounted] = useState(false)
   const [profileDialogOpen, setProfileDialogOpen] = useState(false)
   const [activeTab, setActiveTab] = useState("profile")
+  const [userData, setUserData] = useState<UserData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phoneNumber: "",
+    panNumber: "",
+  })
 
   useEffect(() => {
     setMounted(true)
+    fetchUserData()
   }, [])
+
+  const fetchUserData = async () => {
+    try {
+      setLoading(true)
+      const response = await axios.get("http://localhost:8080/api/user")
+      const data = response.data
+      setUserData(data)
+      setFormData({
+        firstName: data.firstName || "",
+        lastName: data.lastName || "",
+        email: data.email || "",
+        phoneNumber: data.phoneNumber || "",
+        panNumber: data.panNumber || "",
+      })
+    } catch (error) {
+      console.error("Failed to fetch user data:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.id]: e.target.value,
+    })
+  }
+
+  const handleSave = async () => {
+    try {
+      setSaving(true)
+      await axios.post("http://localhost:8080/api/user", {
+        id: userData?.id,
+        email: formData.email,
+        password: userData?.password || "",
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        panNumber: formData.panNumber,
+        phoneNumber: formData.phoneNumber,
+        createdAt: userData?.createdAt,
+        updatedAt: new Date().toISOString(),
+      })
+
+      toast({
+        title: "Success",
+        description: "Your profile has been updated successfully.",
+      })
+
+      // Refresh user data
+      await fetchUserData()
+    } catch (error) {
+      console.error("Failed to update user data:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const getInitials = () => {
+    if (!formData.firstName && !formData.lastName) return "U"
+    return `${formData.firstName.charAt(0)}${formData.lastName.charAt(0)}`.toUpperCase()
+  }
+
+  const getFullName = () => {
+    return `${formData.firstName} ${formData.lastName}`.trim() || "User"
+  }
 
   const openProfileDialog = (tab: string) => {
     setActiveTab(tab)
@@ -128,7 +224,7 @@ export function Navbar() {
                 <Avatar className="h-9 w-9">
                   <AvatarImage src="/avatar.png" alt="User" />
                   <AvatarFallback className="bg-accent text-accent-foreground">
-                    AK
+                    {loading ? "..." : getInitials()}
                   </AvatarFallback>
                 </Avatar>
               </Button>
@@ -136,8 +232,8 @@ export function Navbar() {
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium">Anshul Kumar</p>
-                  <p className="text-xs text-muted-foreground">anshul.kumar@example.com</p>
+                  <p className="text-sm font-medium">{loading ? "Loading..." : getFullName()}</p>
+                  <p className="text-xs text-muted-foreground">{loading ? "..." : formData.email}</p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
@@ -165,43 +261,83 @@ export function Navbar() {
               <TabsTrigger value="billing">Billing</TabsTrigger>
             </TabsList>
             <TabsContent value="profile" className="space-y-4 mt-4">
-              <div className="flex items-center gap-4">
-                <Avatar className="h-20 w-20">
-                  <AvatarImage src="/avatar.png" />
-                  <AvatarFallback className="bg-accent text-accent-foreground text-xl">AK</AvatarFallback>
-                </Avatar>
-                <Button variant="outline" size="sm">Change Photo</Button>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name</Label>
-                  <Input id="firstName" defaultValue="Anshul" />
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-accent" />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name</Label>
-                  <Input id="lastName" defaultValue="Kumar" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" defaultValue="anshul.kumar@example.com" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
-                <Input id="phone" defaultValue="+91 98765 43210" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="pan">PAN Number</Label>
-                <Input id="pan" defaultValue="ABCDE1234F" />
-              </div>
-              <Button className="bg-accent text-accent-foreground hover:bg-accent/90">Save Changes</Button>
-            </TabsContent>
-            <TabsContent value="settings" className="space-y-4 mt-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Notifications</CardTitle>
-                  <CardDescription>Configure how you receive notifications</CardDescription>
-                </CardHeader>
+              ) : (
+                <>
+                  <div className="flex items-center gap-4">
+                    <Avatar className="h-20 w-20">
+                      <AvatarImage src="/avatar.png" />
+                      <AvatarFallback className="bg-accent text-accent-foreground text-xl">{getInitials()}</AvatarFallback>
+                    </Avatar>
+                    <Button variant="outline" size="sm">Change Photo</Button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="firstName">First Name</Label>
+                      <Input
+                        id="firstName"
+                        value={formData.firstName}
+                        onChange={handleInputChange}
+                        disabled={saving}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="lastName">Last Name</Label>
+                      <Input
+                        id="lastName"
+                        value={formData.lastName}
+                        onChange={handleInputChange}
+                        disabled={saving}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      disabled={saving}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phoneNumber">Phone Number</Label>
+                    <Input
+                      id="phoneNumber"
+                      value={formData.phoneNumber}
+                      onChange={handleInputChange}
+                      disabled={saving}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="panNumber">PAN Number</Label>
+                    <Input
+                      id="panNumber"
+                      value={formData.panNumber}
+                      onChange={handleInputChange}
+                      disabled={saving}
+                    />
+                  </div>
+                  <Button
+                    className="bg-accent text-accent-foreground hover:bg-accent/90"
+                    onClick={handleSave}
+                    disabled={saving}
+                  >
+                    {saving ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Save Changes"
+                    )}
+                  </Button>
+                </>
+              )}
                 <CardContent className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Email notifications</span>
@@ -220,7 +356,7 @@ export function Navbar() {
                     <input type="checkbox" defaultChecked className="rounded" />
                   </div>
                 </CardContent>
-              </Card>
+              
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Security</CardTitle>
