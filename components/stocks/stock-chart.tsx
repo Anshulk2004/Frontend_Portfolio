@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -20,20 +20,34 @@ import {
 } from "recharts"
 import { Filter } from "lucide-react"
 
-const allStocks = [
-  { symbol: "RELIANCE", name: "Reliance Industries", price: 2485 },
-  { symbol: "TCS", name: "Tata Consultancy Services", price: 3892 },
-  { symbol: "HDFCBANK", name: "HDFC Bank", price: 1678 },
-  { symbol: "INFY", name: "Infosys", price: 1542 },
-  { symbol: "ICICIBANK", name: "ICICI Bank", price: 1125 },
-  { symbol: "BHARTIARTL", name: "Bharti Airtel", price: 1456 },
-  { symbol: "SBIN", name: "State Bank of India", price: 825 },
-  { symbol: "KOTAKBANK", name: "Kotak Mahindra Bank", price: 1842 },
-  { symbol: "LT", name: "Larsen & Toubro", price: 3425 },
-  { symbol: "WIPRO", name: "Wipro", price: 485 },
-]
+interface MarketStock {
+  id: number
+  symbol: string
+  companyName: string
+  sector: string
+  marketCap: number
+  peRatio: number
+  high52Week: number
+  low52Week: number
+  volume: number
+  dividends: number
+  lastUpdated: string
+}
 
-export function StockChart() {
+interface StockChartProps {
+  stocks: MarketStock[]
+}
+
+export function StockChart({ stocks }: StockChartProps) {
+  const allStocks = useMemo(() => 
+    stocks.map(s => ({
+      symbol: s.symbol.replace('.NS', ''),
+      name: s.companyName,
+      marketCap: s.marketCap
+    })).slice(0, 10), // Top 10 by default
+    [stocks]
+  )
+
   const [selectedStocks, setSelectedStocks] = useState<string[]>(
     allStocks.map((s) => s.symbol)
   )
@@ -58,12 +72,12 @@ export function StockChart() {
     .filter((stock) => selectedStocks.includes(stock.symbol))
     .map((stock) => ({
       name: stock.symbol,
-      price: stock.price,
+      marketCap: stock.marketCap / 10000000, // Convert to Lakh Crores
       fullName: stock.name,
     }))
 
-  const formatINR = (value: number) => {
-    return `Rs. ${value.toLocaleString("en-IN")}`
+  const formatMarketCap = (value: number) => {
+    return `Rs. ${value.toFixed(2)}L Cr`
   }
 
   return (
@@ -161,7 +175,7 @@ export function StockChart() {
                   fontSize={12}
                   tickLine={false}
                   axisLine={false}
-                  tickFormatter={(value) => `Rs. ${value}`}
+                  tickFormatter={(value) => `${value}L Cr`}
                 />
                 <Tooltip
                   contentStyle={{
@@ -171,13 +185,13 @@ export function StockChart() {
                   }}
                   labelStyle={{ color: "var(--foreground)" }}
                   formatter={(value: number, _name: string, props: { payload: { fullName: string } }) => [
-                    formatINR(value),
+                    formatMarketCap(value),
                     props.payload.fullName,
                   ]}
                   labelFormatter={(label) => `Stock: ${label}`}
                 />
                 <Bar
-                  dataKey="price"
+                  dataKey="marketCap"
                   fill="var(--accent)"
                   radius={[4, 4, 0, 0]}
                 />

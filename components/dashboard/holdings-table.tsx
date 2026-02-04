@@ -475,6 +475,22 @@ export function HoldingsTable({ holdings, onRefresh }: HoldingsTableProps) {
         totalAmount: Number(additionalInvestment.toFixed(2)),
         transactionDate: new Date().toISOString()
       })
+
+      // Update wallet balance (deduct amount)
+      try {
+        const walletsResponse = await axios.get("http://localhost:8080/api/wallets")
+        if (walletsResponse.data && walletsResponse.data.length > 0) {
+          const wallet = walletsResponse.data[0] // Use first wallet
+          const newBalance = Number(wallet.balance) - additionalInvestment
+          
+          await axios.put(`http://localhost:8080/api/wallets/${wallet.id}`, {
+            ...wallet,
+            balance: Number(newBalance.toFixed(2))
+          })
+        }
+      } catch (walletError) {
+        console.error("Failed to update wallet balance:", walletError)
+      }
       
       toast({
         title: "Success",
@@ -501,7 +517,42 @@ export function HoldingsTable({ holdings, onRefresh }: HoldingsTableProps) {
 
     try {
       setSelling(true)
+      
+      // Calculate sale proceeds
+      const saleProceeds = selectedHolding.currentPrice * selectedHolding.quantity
+      
       await axios.delete(`http://localhost:8080/api/holdings/${selectedHolding.id}`)
+      
+      // Create sell transaction record
+      try {
+        await axios.post("http://localhost:8080/api/transactions", {
+          user: selectedHolding.user ? { id: selectedHolding.user.id } : null,
+          symbol: selectedHolding.symbol,
+          transactionType: "SELL",
+          quantity: selectedHolding.quantity,
+          price: Number(selectedHolding.currentPrice),
+          totalAmount: Number(saleProceeds.toFixed(2)),
+          transactionDate: new Date().toISOString()
+        })
+      } catch (txError) {
+        console.error("Failed to create transaction record:", txError)
+      }
+
+      // Update wallet balance (add sale proceeds)
+      try {
+        const walletsResponse = await axios.get("http://localhost:8080/api/wallets")
+        if (walletsResponse.data && walletsResponse.data.length > 0) {
+          const wallet = walletsResponse.data[0] // Use first wallet
+          const newBalance = Number(wallet.balance) + saleProceeds
+          
+          await axios.put(`http://localhost:8080/api/wallets/${wallet.id}`, {
+            ...wallet,
+            balance: Number(newBalance.toFixed(2))
+          })
+        }
+      } catch (walletError) {
+        console.error("Failed to update wallet balance:", walletError)
+      }
       
       toast({
         title: "Success",
