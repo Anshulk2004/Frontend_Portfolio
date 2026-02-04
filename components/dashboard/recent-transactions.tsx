@@ -3,6 +3,24 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowUpRight, ArrowDownRight } from "lucide-react"
 
+interface Holding {
+  id: number
+  symbol: string
+  companyName: string
+  sector: string
+  currentPrice: number
+  timePeriod: string
+  quantity: number
+  totalInvested: number
+  acquiredPrice?: number
+  acquiredDate: string
+  updatedAt: string
+}
+
+interface RecentTransactionsProps {
+  holdings?: Holding[]
+}
+
 const transactions = [
   {
     type: "buy",
@@ -54,7 +72,7 @@ const transactions = [
   },
 ]
 
-export function RecentTransactions() {
+export function RecentTransactions({ holdings }: RecentTransactionsProps) {
   const formatINR = (value: number) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',

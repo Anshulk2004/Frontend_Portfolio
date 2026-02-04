@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { RefreshCw } from "lucide-react"
@@ -15,63 +15,76 @@ import {
   Legend,
 } from "recharts"
 
-const timeFilters = ["1D", "1W", "1M", "3M", "6M", "1Y"]
-
-// Stock-wise performance data
-const data = {
-  "1D": [
-    { name: "RELIANCE", profit: 12500, loss: 0 },
-    { name: "TCS", profit: 8200, loss: 0 },
-    { name: "HDFCBANK", profit: 0, loss: 3500 },
-    { name: "INFY", profit: 6800, loss: 0 },
-    { name: "ICICIBANK", profit: 0, loss: 2100 },
-    { name: "BHARTIARTL", profit: 4500, loss: 0 },
-  ],
-  "1W": [
-    { name: "RELIANCE", profit: 45000, loss: 0 },
-    { name: "TCS", profit: 32000, loss: 0 },
-    { name: "HDFCBANK", profit: 0, loss: 12000 },
-    { name: "INFY", profit: 28500, loss: 0 },
-    { name: "ICICIBANK", profit: 18000, loss: 0 },
-    { name: "WIPRO", profit: 0, loss: 8500 },
-  ],
-  "1M": [
-    { name: "RELIANCE", profit: 125000, loss: 0 },
-    { name: "TCS", profit: 98000, loss: 0 },
-    { name: "HDFCBANK", profit: 0, loss: 35000 },
-    { name: "INFY", profit: 78500, loss: 0 },
-    { name: "TATASTEEL", profit: 0, loss: 42000 },
-    { name: "BHARTIARTL", profit: 65000, loss: 0 },
-  ],
-  "3M": [
-    { name: "RELIANCE", profit: 285000, loss: 0 },
-    { name: "TCS", profit: 245000, loss: 0 },
-    { name: "HDFCBANK", profit: 125000, loss: 0 },
-    { name: "INFY", profit: 0, loss: 55000 },
-    { name: "ICICIBANK", profit: 178000, loss: 0 },
-    { name: "TATAMOTORS", profit: 0, loss: 85000 },
-  ],
-  "6M": [
-    { name: "RELIANCE", profit: 485000, loss: 0 },
-    { name: "TCS", profit: 425000, loss: 0 },
-    { name: "HDFCBANK", profit: 285000, loss: 0 },
-    { name: "INFY", profit: 225000, loss: 0 },
-    { name: "ICICIBANK", profit: 0, loss: 95000 },
-    { name: "BHARTIARTL", profit: 185000, loss: 0 },
-  ],
-  "1Y": [
-    { name: "RELIANCE", profit: 850000, loss: 0 },
-    { name: "TCS", profit: 725000, loss: 0 },
-    { name: "HDFCBANK", profit: 485000, loss: 0 },
-    { name: "INFY", profit: 425000, loss: 0 },
-    { name: "ICICIBANK", profit: 385000, loss: 0 },
-    { name: "TATASTEEL", profit: 0, loss: 125000 },
-  ],
+interface Holding {
+  id: number
+  symbol: string
+  companyName: string
+  sector: string
+  currentPrice: number
+  timePeriod: string
+  quantity: number
+  totalInvested: number
+  acquiredPrice?: number
+  acquiredDate: string
+  updatedAt: string
 }
 
-export function PerformanceChart() {
-  const [activeFilter, setActiveFilter] = useState("1M")
+interface PerformanceChartProps {
+  holdings: Holding[]
+}
+
+const timeFilters = [
+  { label: "1D", value: "yesterday" },
+  { label: "1W", value: "7d" },
+  { label: "1M", value: "1mo" },
+  { label: "3M", value: "3mo" },
+  { label: "6M", value: "6mo" },
+]
+
+export function PerformanceChart({ holdings }: PerformanceChartProps) {
+  const [activeFilter, setActiveFilter] = useState("1mo")
   const [isRefreshing, setIsRefreshing] = useState(false)
+
+  // Calculate performance data based on selected time period
+  const performanceData = useMemo(() => {
+    // Get selected period holdings
+    const periodHoldings = holdings.filter(h => h.timePeriod === activeFilter)
+
+    // Calculate P&L for each stock in the selected period
+    const stockPerformance = periodHoldings.map(holding => {
+      const quantity = holding.quantity
+      const currentPrice = holding.currentPrice
+      const acquiredPrice = holding.acquiredPrice
+      
+      // Skip if no quantity or price data
+      if (!quantity || !currentPrice) return null
+
+      // Calculate using acquired price if available, otherwise use totalInvested
+      const investedAmount = acquiredPrice 
+        ? acquiredPrice * quantity 
+        : holding.totalInvested
+      
+      const currentValue = currentPrice * quantity
+      const pnl = currentValue - investedAmount
+
+      return {
+        name: holding.symbol.replace('.NS', ''),
+        companyName: holding.companyName,
+        profit: pnl > 0 ? pnl : 0,
+        loss: pnl < 0 ? Math.abs(pnl) : 0,
+        pnl,
+        currentValue,
+        investedAmount,
+        acquiredPrice,
+        currentPrice
+      }
+    }).filter(Boolean) as Array<{ name: string; companyName: string; profit: number; loss: number; pnl: number; currentValue: number; investedAmount: number; acquiredPrice?: number; currentPrice: number }>
+
+    // Sort by absolute P&L and take top 6 performers
+    return stockPerformance
+      .sort((a, b) => Math.abs(b.pnl) - Math.abs(a.pnl))
+      .slice(0, 6)
+  }, [holdings, activeFilter])
 
   const handleRefresh = () => {
     setIsRefreshing(true)
@@ -93,17 +106,17 @@ export function PerformanceChart() {
           <div className="flex bg-muted rounded-lg p-1">
             {timeFilters.map((filter) => (
               <Button
-                key={filter}
-                variant={activeFilter === filter ? "default" : "ghost"}
+                key={filter.value}
+                variant={activeFilter === filter.value ? "default" : "ghost"}
                 size="sm"
                 className={`px-3 py-1 text-xs ${
-                  activeFilter === filter
+                  activeFilter === filter.value
                     ? "bg-accent text-accent-foreground"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
-                onClick={() => setActiveFilter(filter)}
+                onClick={() => setActiveFilter(filter.value)}
               >
-                {filter}
+                {filter.label}
               </Button>
             ))}
           </div>
@@ -119,37 +132,43 @@ export function PerformanceChart() {
       </CardHeader>
       <CardContent>
         <div className="h-[300px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data[activeFilter as keyof typeof data]} barGap={2}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-              <XAxis 
-                dataKey="name" 
-                stroke="var(--muted-foreground)"
-                fontSize={12}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis 
-                stroke="var(--muted-foreground)"
-                fontSize={12}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={formatINR}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "var(--card)",
-                  border: "1px solid var(--border)",
-                  borderRadius: "8px",
-                }}
-                labelStyle={{ color: "var(--foreground)" }}
-                formatter={(value: number) => [formatINR(value), value > 0 ? "Profit" : "Loss"]}
-              />
-              <Legend />
-              <Bar dataKey="profit" name="Profit" fill="var(--success)" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="loss" name="Loss" fill="var(--destructive)" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          {performanceData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={performanceData} barGap={2}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                <XAxis 
+                  dataKey="name" 
+                  stroke="var(--muted-foreground)"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis 
+                  stroke="var(--muted-foreground)"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={formatINR}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "var(--card)",
+                    border: "1px solid var(--border)",
+                    borderRadius: "8px",
+                  }}
+                  labelStyle={{ color: "var(--foreground)" }}
+                  formatter={(value: number, name: string) => [formatINR(value), name === "profit" ? "Profit" : "Loss"]}
+                />
+                <Legend />
+                <Bar dataKey="profit" name="Profit" fill="var(--success)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="loss" name="Loss" fill="var(--destructive)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-full text-muted-foreground">
+              No data available for the selected period
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
