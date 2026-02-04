@@ -10,17 +10,13 @@ import axios from "axios"
 import { Loader2 } from "lucide-react"
 
 interface MarketStock {
-  id: number
-  symbol: string
-  companyName: string
-  sector: string
-  marketCap: number
-  peRatio: number
-  high52Week: number
-  low52Week: number
-  volume: number
-  dividends: number
-  lastUpdated: string
+  Symbol: string
+  CurrentPrice: number
+  Sector: string
+  MarketCap: number
+  PE_Ratio: number
+  Volume: number
+  LastUpdated: string
 }
 
 export default function StocksPage() {
@@ -30,16 +26,23 @@ export default function StocksPage() {
 
   useEffect(() => {
     fetchStocks()
+    // Refresh every 1 minute for real-time data
+    const interval = setInterval(fetchStocks, 60000)
+    return () => clearInterval(interval)
   }, [selectedSector])
 
   const fetchStocks = async () => {
     try {
       setLoading(true)
-      const url = selectedSector 
-        ? `http://localhost:8080/api/market-stocks?sector=${selectedSector}`
-        : "http://localhost:8080/api/market-stocks"
-      const response = await axios.get(url)
-      setStocks(response.data)
+      const response = await axios.get("http://localhost:8080/api/flask/stock-data")
+      let stockData = response.data
+      
+      // Filter by sector if selected
+      if (selectedSector) {
+        stockData = stockData.filter((stock: MarketStock) => stock.Sector === selectedSector)
+      }
+      
+      setStocks(stockData)
     } catch (error) {
       console.error("Failed to fetch market stocks:", error)
     } finally {

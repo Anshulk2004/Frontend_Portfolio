@@ -6,17 +6,13 @@ import { useMemo } from "react"
 import { Button } from "@/components/ui/button"
 
 interface MarketStock {
-  id: number
-  symbol: string
-  companyName: string
-  sector: string
-  marketCap: number
-  peRatio: number
-  high52Week: number
-  low52Week: number
-  volume: number
-  dividends: number
-  lastUpdated: string
+  Symbol: string
+  CurrentPrice: number
+  Sector: string
+  MarketCap: number
+  PE_Ratio: number
+  Volume: number
+  LastUpdated: string
 }
 
 interface SectorBreakdownProps {
@@ -47,8 +43,8 @@ export function SectorBreakdown({ stocks, onSectorClick, selectedSector }: Secto
     const sectorMap = new Map<string, number>()
     
     stocks.forEach(stock => {
-      if (stock.sector) {
-        sectorMap.set(stock.sector, (sectorMap.get(stock.sector) || 0) + 1)
+      if (stock.Sector) {
+        sectorMap.set(stock.Sector, (sectorMap.get(stock.Sector) || 0) + 1)
       }
     })
     
