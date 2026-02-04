@@ -21,17 +21,13 @@ import {
 import { Filter } from "lucide-react"
 
 interface MarketStock {
-  id: number
-  symbol: string
-  companyName: string
-  sector: string
-  marketCap: number
-  peRatio: number
-  high52Week: number
-  low52Week: number
-  volume: number
-  dividends: number
-  lastUpdated: string
+  Symbol: string
+  CurrentPrice: number
+  Sector: string
+  MarketCap: number
+  PE_Ratio: number
+  Volume: number
+  LastUpdated: string
 }
 
 interface StockChartProps {
@@ -41,9 +37,9 @@ interface StockChartProps {
 export function StockChart({ stocks }: StockChartProps) {
   const allStocks = useMemo(() => 
     stocks.map(s => ({
-      symbol: s.symbol.replace('.NS', ''),
-      name: s.companyName,
-      marketCap: s.marketCap
+      symbol: s.Symbol.replace('.NS', ''),
+      name: s.Symbol.replace('.NS', ''),
+      marketCap: s.MarketCap
     })).slice(0, 10), // Top 10 by default
     [stocks]
   )

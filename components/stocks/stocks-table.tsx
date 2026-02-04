@@ -11,7 +11,17 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Star, StarOff, ChevronLeft, ChevronRight, MoreHorizontal, ShoppingCart, Eye } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import axios from "axios"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,17 +39,13 @@ import {
 import { useWatchlist } from "@/contexts/watchlist-context"
 
 interface MarketStock {
-  id: number
-  symbol: string
-  companyName: string
-  sector: string
-  marketCap: number
-  peRatio: number
-  high52Week: number
-  low52Week: number
-  volume: number
-  dividends: number
-  lastUpdated: string
+  Symbol: string
+  CurrentPrice: number
+  Sector: string
+  MarketCap: number
+  PE_Ratio: number
+  Volume: number
+  LastUpdated: string
 }
 
 interface StocksTableProps {
@@ -51,19 +57,36 @@ export function StocksTable({ stocks, onRefresh }: StocksTableProps) {
   const { addToWatchlist, removeFromWatchlist, isInWatchlist } = useWatchlist()
   const [currentPage, setCurrentPage] = useState(1)
   const [viewDialogOpen, setViewDialogOpen] = useState(false)
+  const [buyDialogOpen, setBuyDialogOpen] = useState(false)
   const [selectedStock, setSelectedStock] = useState<MarketStock | null>(null)
+  const [buyQuantity, setBuyQuantity] = useState("")
+  const [buyTimePeriod, setBuyTimePeriod] = useState("today")
+  const [user, setUser] = useState<any>(null)
   
   const itemsPerPage = 10
   const totalPages = Math.ceil(stocks.length / itemsPerPage)
 
+  useEffect(() => {
+    fetchUser()
+  }, [])
+
+  const fetchUser = async () => {
+    try {
+      const response = await axios.get("http://localhost:8080/api/user")
+      setUser(response.data)
+    } catch (error) {
+      console.error("Error fetching user:", error)
+    }
+  }
+
   const toggleWatchlist = (stock: MarketStock) => {
-    if (isInWatchlist(stock.symbol)) {
-      removeFromWatchlist(stock.symbol)
+    if (isInWatchlist(stock.Symbol)) {
+      removeFromWatchlist(stock.Symbol)
     } else {
       addToWatchlist({
-        symbol: stock.symbol,
-        name: stock.companyName,
-        price: 0, // Price not available in MarketStock, watchlist will fetch later
+        symbol: stock.Symbol,
+        name: stock.Symbol.replace('.NS', ''),
+        price: stock.CurrentPrice,
         change: 0
       })
     }
@@ -77,6 +100,72 @@ export function StocksTable({ stocks, onRefresh }: StocksTableProps) {
   const handleViewMore = (stock: MarketStock) => {
     setSelectedStock(stock)
     setViewDialogOpen(true)
+  }
+
+  const handleBuyStock = (stock: MarketStock) => {
+    setSelectedStock(stock)
+    setBuyDialogOpen(true)
+    setBuyQuantity("")
+  }
+
+  const confirmBuyStock = async () => {
+    if (!selectedStock || !user || !buyQuantity) return
+
+    const quantity = Number(buyQuantity)
+    if (quantity <= 0) return
+
+    const totalCost = selectedStock.CurrentPrice * quantity
+
+    try {
+      // Fetch wallet to deduct balance
+      const walletsResponse = await axios.get("http://localhost:8080/api/wallets")
+      if (walletsResponse.data.length > 0) {
+        const wallet = walletsResponse.data[0]
+        const newBalance = Number(wallet.balance) - totalCost
+
+        if (newBalance < 0) {
+          alert("Insufficient wallet balance!")
+          return
+        }
+
+        // Update wallet balance
+        await axios.put(`http://localhost:8080/api/wallets/${wallet.id}`, {
+          ...wallet,
+          balance: newBalance
+        })
+      }
+
+      // Create holding
+      await axios.post("http://localhost:8080/api/holdings", {
+        user: { id: user.id },
+        symbol: selectedStock.Symbol,
+        companyName: selectedStock.Symbol.replace('.NS', ''),
+        sector: selectedStock.Sector,
+        currentPrice: selectedStock.CurrentPrice,
+        acquiredPrice: selectedStock.CurrentPrice,
+        timePeriod: buyTimePeriod,
+        quantity: quantity,
+        totalInvested: totalCost,
+        acquiredDate: new Date().toISOString().split('T')[0]
+      })
+
+      // Create transaction
+      await axios.post("http://localhost:8080/api/transactions", {
+        user: { id: user.id },
+        symbol: selectedStock.Symbol,
+        transactionType: "BUY",
+        quantity: quantity,
+        price: selectedStock.CurrentPrice,
+        totalAmount: totalCost,
+        transactionDate: new Date().toISOString()
+      })
+
+      setBuyDialogOpen(false)
+      alert("Stock purchased successfully!")
+    } catch (error) {
+      console.error("Error buying stock:", error)
+      alert("Failed to purchase stock")
+    }
   }
 
   const formatINR = (value: number) => {
@@ -114,7 +203,7 @@ export function StocksTable({ stocks, onRefresh }: StocksTableProps) {
               </TableHeader>
               <TableBody>
                 {paginatedStocks.map((stock) => (
-                  <TableRow key={stock.symbol} className="border-border hover:bg-muted/50">
+                  <TableRow key={stock.Symbol} className="border-border hover:bg-muted/50">
                     <TableCell>
                       <Button
                         variant="ghost"
@@ -122,7 +211,7 @@ export function StocksTable({ stocks, onRefresh }: StocksTableProps) {
                         className="h-8 w-8"
                         onClick={() => toggleWatchlist(stock)}
                       >
-                        {isInWatchlist(stock.symbol) ? (
+                        {isInWatchlist(stock.Symbol) ? (
                           <Star className="w-4 h-4 fill-warning text-warning" />
                         ) : (
                           <StarOff className="w-4 h-4 text-muted-foreground" />
@@ -131,26 +220,26 @@ export function StocksTable({ stocks, onRefresh }: StocksTableProps) {
                     </TableCell>
                     <TableCell>
                       <div>
-                        <p className="font-medium text-foreground">{stock.symbol.replace('.NS', '')}</p>
-                        <p className="text-sm text-muted-foreground">{stock.companyName}</p>
+                        <p className="font-medium text-foreground">{stock.Symbol.replace('.NS', '')}</p>
+                        <p className="text-sm text-muted-foreground">{stock.LastUpdated}</p>
                       </div>
                     </TableCell>
                     <TableCell>
                       <span className="px-2 py-1 text-xs rounded-full bg-muted text-muted-foreground">
-                        {stock.sector || 'N/A'}
+                        {stock.Sector || 'N/A'}
                       </span>
                     </TableCell>
                     <TableCell className="text-right font-medium text-foreground">
-                      -
+                      {formatINR(stock.CurrentPrice)}
                     </TableCell>
                     <TableCell className="text-right text-muted-foreground">
-                      {stock.volume ? stock.volume.toLocaleString() : 'N/A'}
+                      {stock.Volume ? stock.Volume.toLocaleString() : 'N/A'}
                     </TableCell>
                     <TableCell className="text-right text-muted-foreground">
-                      {stock.marketCap ? `Rs. ${(stock.marketCap / 10000000).toFixed(2)}L Cr` : 'N/A'}
+                      {stock.MarketCap ? `Rs. ${(stock.MarketCap / 10000000).toFixed(2)}L Cr` : 'N/A'}
                     </TableCell>
                     <TableCell className="text-right text-muted-foreground">
-                      {stock.peRatio ? stock.peRatio.toFixed(2) : 'N/A'}
+                      {stock.PE_Ratio ? stock.PE_Ratio.toFixed(2) : 'N/A'}
                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
@@ -160,6 +249,10 @@ export function StocksTable({ stocks, onRefresh }: StocksTableProps) {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleBuyStock(stock)}>
+                            <ShoppingCart className="w-4 h-4 mr-2" />
+                            Buy Stock
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleViewMore(stock)}>
                             <Eye className="w-4 h-4 mr-2" />
                             View Details
@@ -216,23 +309,23 @@ export function StocksTable({ stocks, onRefresh }: StocksTableProps) {
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{selectedStock?.companyName}</DialogTitle>
+            <DialogTitle>{selectedStock?.Symbol.replace('.NS', '')}</DialogTitle>
             <DialogDescription>
-              {selectedStock?.symbol} - {selectedStock?.sector || 'N/A'}
+              {selectedStock?.Symbol} - {selectedStock?.Sector || 'N/A'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 rounded-lg bg-muted/50">
-                <p className="text-sm text-muted-foreground">52W High</p>
+                <p className="text-sm text-muted-foreground">Current Price</p>
                 <p className="text-xl font-bold text-foreground">
-                  {selectedStock?.high52Week ? formatINR(Number(selectedStock.high52Week)) : 'N/A'}
+                  {selectedStock?.CurrentPrice ? formatINR(selectedStock.CurrentPrice) : 'N/A'}
                 </p>
               </div>
               <div className="p-4 rounded-lg bg-muted/50">
-                <p className="text-sm text-muted-foreground">52W Low</p>
+                <p className="text-sm text-muted-foreground">Last Updated</p>
                 <p className="text-xl font-bold text-foreground">
-                  {selectedStock?.low52Week ? formatINR(Number(selectedStock.low52Week)) : 'N/A'}
+                  {selectedStock?.LastUpdated || 'N/A'}
                 </p>
               </div>
             </div>
@@ -240,31 +333,75 @@ export function StocksTable({ stocks, onRefresh }: StocksTableProps) {
               <div className="p-4 rounded-lg bg-muted/50">
                 <p className="text-sm text-muted-foreground">P/E Ratio</p>
                 <p className="text-xl font-bold text-foreground">
-                  {selectedStock?.peRatio ? Number(selectedStock.peRatio).toFixed(2) : 'N/A'}
+                  {selectedStock?.PE_Ratio ? selectedStock.PE_Ratio.toFixed(2) : 'N/A'}
                 </p>
               </div>
               <div className="p-4 rounded-lg bg-muted/50">
-                <p className="text-sm text-muted-foreground">Dividend Yield</p>
+                <p className="text-sm text-muted-foreground">Volume</p>
                 <p className="text-xl font-bold text-foreground">
-                  {selectedStock?.dividends ? `${Number(selectedStock.dividends).toFixed(2)}%` : 'N/A'}
+                  {selectedStock?.Volume ? selectedStock.Volume.toLocaleString() : 'N/A'}
                 </p>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-muted-foreground">Volume</p>
-                <p className="font-medium">{selectedStock?.volume ? selectedStock.volume.toLocaleString() : 'N/A'}</p>
-              </div>
-              <div>
+            <div className="grid grid-cols-1 gap-4 text-sm">
+              <div className="p-4 rounded-lg bg-muted/50">
                 <p className="text-muted-foreground">Market Cap</p>
-                <p className="font-medium">
-                  {selectedStock?.marketCap ? `Rs. ${(selectedStock.marketCap / 10000000).toFixed(2)}L Cr` : 'N/A'}
+                <p className="font-medium text-lg">
+                  {selectedStock?.MarketCap ? `Rs. ${(selectedStock.MarketCap / 10000000).toFixed(2)}L Cr` : 'N/A'}
                 </p>
               </div>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setViewDialogOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Buy Stock Dialog */}
+      <Dialog open={buyDialogOpen} onOpenChange={setBuyDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Buy {selectedStock?.Symbol.replace('.NS', '')}</DialogTitle>
+            <DialogDescription>
+              Enter the quantity and time period for your purchase
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Current Price</Label>
+              <div className="text-2xl font-bold text-foreground">
+                {selectedStock ? formatINR(selectedStock.CurrentPrice) : 'N/A'}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="quantity">Quantity</Label>
+              <Input
+                id="quantity"
+                type="number"
+                placeholder="Enter quantity"
+                value={buyQuantity}
+                onChange={(e) => setBuyQuantity(e.target.value)}
+              />
+            </div>
+            {buyQuantity && Number(buyQuantity) > 0 && selectedStock && (
+              <div className="p-4 rounded-lg bg-muted space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Total Cost</span>
+                  <span className="font-semibold">{formatINR(selectedStock.CurrentPrice * Number(buyQuantity))}</span>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBuyDialogOpen(false)}>Cancel</Button>
+            <Button 
+              onClick={confirmBuyStock} 
+              disabled={!buyQuantity || Number(buyQuantity) <= 0}
+              className="bg-accent hover:bg-accent/90"
+            >
+              Confirm Purchase
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
