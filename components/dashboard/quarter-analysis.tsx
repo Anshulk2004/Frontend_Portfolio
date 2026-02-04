@@ -4,6 +4,24 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { TrendingUp, TrendingDown, Target, Calendar } from "lucide-react"
 
+interface Holding {
+  id: number
+  symbol: string
+  companyName: string
+  sector: string
+  currentPrice: number
+  timePeriod: string
+  quantity: number
+  totalInvested: number
+  acquiredPrice?: number
+  acquiredDate: string
+  updatedAt: string
+}
+
+interface QuarterAnalysisProps {
+  holdings?: Holding[]
+}
+
 const quarterData = [
   {
     quarter: "Q1 2024",
@@ -35,7 +53,7 @@ const quarterData = [
   },
 ]
 
-export function QuarterAnalysis() {
+export function QuarterAnalysis({ holdings }: QuarterAnalysisProps) {
   return (
     <Card className="bg-card border-border">
       <CardHeader className="pb-2">

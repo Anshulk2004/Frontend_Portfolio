@@ -3,50 +3,72 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { TrendingUp, TrendingDown, IndianRupee, ArrowUpRight, Wallet, Activity } from "lucide-react"
 
-const stats = [
-  {
-    title: "Total Invested",
-    value: "Rs. 10,37,500",
-    change: "+12.5%",
-    trend: "up",
-    icon: IndianRupee,
-    description: "Since last month",
-  },
-  {
-    title: "Total Returns",
-    value: "Rs. 1,52,000",
-    change: "+8.2%",
-    trend: "up",
-    icon: TrendingUp,
-    description: "All time returns",
-  },
-  {
-    title: "Cash Inflow (30d)",
-    value: "Rs. 45,170",
-    change: "+23.1%",
-    trend: "up",
-    icon: ArrowUpRight,
-    description: "Last 30 days",
-  },
-  {
-    title: "Portfolio Value",
-    value: "Rs. 11,89,500",
-    change: "-2.3%",
-    trend: "down",
-    icon: Wallet,
-    description: "Current value",
-  },
-  {
-    title: "Active Positions",
-    value: "24",
-    change: "+3",
-    trend: "up",
-    icon: Activity,
-    description: "Open positions",
-  },
-]
+interface StatsCardsProps {
+  totalInvested: number
+  totalReturns: number
+  totalCurrentValue: number
+  returnsPercentage: number
+  activePositions: number
+}
 
-export function StatsCards() {
+export function StatsCards({
+  totalInvested,
+  totalReturns,
+  totalCurrentValue,
+  returnsPercentage,
+  activePositions
+}: StatsCardsProps) {
+  const formatINR = (value: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(value)
+  }
+
+  const stats = [
+    {
+      title: "Total Invested",
+      value: formatINR(totalInvested),
+      change: "+12.5%",
+      trend: "up",
+      icon: IndianRupee,
+      description: "Since last month",
+    },
+    {
+      title: "Total Returns",
+      value: formatINR(totalReturns),
+      change: `${returnsPercentage >= 0 ? '+' : ''}${returnsPercentage.toFixed(2)}%`,
+      trend: totalReturns >= 0 ? "up" : "down",
+      icon: TrendingUp,
+      description: "All time returns",
+    },
+    {
+      title: "Portfolio Value",
+      value: formatINR(totalCurrentValue),
+      change: `${returnsPercentage >= 0 ? '+' : ''}${returnsPercentage.toFixed(2)}%`,
+      trend: totalReturns >= 0 ? "up" : "down",
+      icon: Wallet,
+      description: "Current value",
+    },
+    {
+      title: "Active Positions",
+      value: activePositions.toString(),
+      change: "+3",
+      trend: "up",
+      icon: Activity,
+      description: "Open positions",
+    },
+    {
+      title: "P&L",
+      value: formatINR(totalReturns),
+      change: `${returnsPercentage >= 0 ? '+' : ''}${returnsPercentage.toFixed(2)}%`,
+      trend: totalReturns >= 0 ? "up" : "down",
+      icon: totalReturns >= 0 ? TrendingUp : TrendingDown,
+      description: "Profit & Loss",
+    },
+  ]
+
   return (
     <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
       {stats.map((stat) => (

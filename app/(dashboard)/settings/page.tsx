@@ -1,13 +1,123 @@
 "use client"
 
+import { useState, useEffect } from "react"
+import axios from "axios"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { User, CreditCard, Globe, Upload } from "lucide-react"
+import { User, CreditCard, Globe, Upload, Loader2 } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+
+interface UserData {
+  id: number
+  email: string
+  password: string
+  firstName: string
+  lastName: string
+  panNumber: string
+  phoneNumber: string
+  createdAt: string
+  updatedAt: string
+}
 
 export default function SettingsPage() {
+  const { toast } = useToast()
+  const [userData, setUserData] = useState<UserData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phoneNumber: "",
+    panNumber: "",
+  })
+
+  useEffect(() => {
+    fetchUserData()
+  }, [])
+
+  const fetchUserData = async () => {
+    try {
+      setLoading(true)
+      const response = await axios.get("http://localhost:8080/api/user")
+      const data = response.data
+      setUserData(data)
+      setFormData({
+        firstName: data.firstName || "",
+        lastName: data.lastName || "",
+        email: data.email || "",
+        phoneNumber: data.phoneNumber || "",
+        panNumber: data.panNumber || "",
+      })
+    } catch (error) {
+      console.error("Failed to fetch user data:", error)
+      toast({
+        title: "Error",
+        description: "Failed to load user data. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.id]: e.target.value,
+    })
+  }
+
+  const handleSave = async () => {
+    try {
+      setSaving(true)
+      await axios.post("http://localhost:8080/api/user", {
+        id: userData?.id,
+        email: formData.email,
+        password: userData?.password || "",
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        panNumber: formData.panNumber,
+        phoneNumber: formData.phoneNumber,
+        createdAt: userData?.createdAt,
+        updatedAt: new Date().toISOString(),
+      })
+
+      toast({
+        title: "Success",
+        description: "Your profile has been updated successfully.",
+      })
+
+      // Refresh user data
+      await fetchUserData()
+    } catch (error) {
+      console.error("Failed to update user data:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const getInitials = () => {
+    if (!formData.firstName && !formData.lastName) return "U"
+    return `${formData.firstName.charAt(0)}${formData.lastName.charAt(0)}`.toUpperCase()
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="w-8 h-8 animate-spin text-accent" />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-4 md:space-y-6 max-w-4xl">
       <div>
@@ -28,7 +138,9 @@ export default function SettingsPage() {
           <div className="flex flex-col sm:flex-row items-center gap-4 md:gap-6">
             <Avatar className="w-16 h-16 md:w-20 md:h-20">
               <AvatarImage src="/avatar.png" />
-              <AvatarFallback className="bg-accent text-accent-foreground text-xl md:text-2xl">AK</AvatarFallback>
+              <AvatarFallback className="bg-accent text-accent-foreground text-xl md:text-2xl">
+                {getInitials()}
+              </AvatarFallback>
             </Avatar>
             <Button variant="outline" className="gap-2 bg-transparent text-sm">
               <Upload className="w-4 h-4" />
@@ -38,23 +150,65 @@ export default function SettingsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="firstName">First Name</Label>
-              <Input id="firstName" defaultValue="Anshul" />
+              <Input
+                id="firstName"
+                value={formData.firstName}
+                onChange={handleInputChange}
+                disabled={saving}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="lastName">Last Name</Label>
-              <Input id="lastName" defaultValue="Kumar" />
+              <Input
+                id="lastName"
+                value={formData.lastName}
+                onChange={handleInputChange}
+                disabled={saving}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" defaultValue="anshul.kumar@example.com" />
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                disabled={saving}
+              />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
-              <Input id="phone" type="tel" defaultValue="+91 98765 43210" />
+              <Label htmlFor="phoneNumber">Phone Number</Label>
+              <Input
+                id="phoneNumber"
+                type="tel"
+                value={formData.phoneNumber}
+                onChange={handleInputChange}
+                disabled={saving}
+              />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="panNumber">PAN Number</Label>
+              <Input
+                id="panNumber"
+                value={formData.panNumber}
+                onChange={handleInputChange}
+                disabled={saving}
+              />
             </div>
           </div>
-          <Button className="bg-accent text-accent-foreground hover:bg-accent/90">
-            Save Changes
+          <Button
+            className="bg-accent text-accent-foreground hover:bg-accent/90"
+            onClick={handleSave}
+            disabled={saving}
+          >
+            {saving ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Save Changes"
+            )}
           </Button>
         </CardContent>
       </Card>

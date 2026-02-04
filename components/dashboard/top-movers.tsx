@@ -4,6 +4,24 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TrendingUp, TrendingDown } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
+interface Holding {
+  id: number
+  symbol: string
+  companyName: string
+  sector: string
+  currentPrice: number
+  timePeriod: string
+  quantity: number
+  totalInvested: number
+  acquiredPrice?: number
+  acquiredDate: string
+  updatedAt: string
+}
+
+interface TopMoversProps {
+  holdings?: Holding[]
+}
+
 const gainers = [
   { symbol: "ADANIENT.NS", name: "Adani Enterprises", change: 5.82, price: 2845.75 },
   { symbol: "TATAMOTORS.NS", name: "Tata Motors", change: 4.15, price: 985.40 },
@@ -18,7 +36,7 @@ const losers = [
   { symbol: "COALINDIA.NS", name: "Coal India", change: -2.12, price: 478.90 },
 ]
 
-export function TopMovers() {
+export function TopMovers({ holdings }: TopMoversProps) {
   const formatINR = (value: number) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',

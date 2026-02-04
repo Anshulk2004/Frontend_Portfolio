@@ -318,7 +318,8 @@
 
 "use client"
 import { useEffect, useState } from "react"
-import { Bell, Moon, Sun, TrendingUp, Calendar } from "lucide-react"
+import axios from "axios"
+import { Bell, Moon, Sun, TrendingUp, Calendar, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -343,13 +344,37 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useToast } from "@/hooks/use-toast"
+
+interface UserData {
+  id: number
+  email: string
+  password: string
+  firstName: string
+  lastName: string
+  panNumber: string
+  phoneNumber: string
+  createdAt: string
+  updatedAt: string
+}
 
 export function Navbar() {
   const { setTheme, resolvedTheme } = useTheme()
+  const { toast } = useToast()
   const [mounted, setMounted] = useState(false)
   const [profileDialogOpen, setProfileDialogOpen] = useState(false)
   const [activeTab, setActiveTab] = useState("profile")
   const [isMarketOpen, setIsMarketOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [userData, setUserData] = useState<UserData | null>(null)
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phoneNumber: "",
+    panNumber: "",
+  })
 
   // Check if market is open (9:15 AM - 3:30 PM IST, Monday-Friday)
   const checkMarketStatus = () => {
@@ -373,6 +398,7 @@ export function Navbar() {
 
   useEffect(() => {
     setMounted(true)
+    fetchUserData()
     
     // Initial check
     setIsMarketOpen(checkMarketStatus())
@@ -384,6 +410,76 @@ export function Navbar() {
 
     return () => clearInterval(interval)
   }, [])
+
+  const fetchUserData = async () => {
+    try {
+      setLoading(true)
+      const response = await axios.get("http://localhost:8080/api/user")
+      const data = response.data
+      setUserData(data)
+      setFormData({
+        firstName: data.firstName || "",
+        lastName: data.lastName || "",
+        email: data.email || "",
+        phoneNumber: data.phoneNumber || "",
+        panNumber: data.panNumber || "",
+      })
+    } catch (error) {
+      console.error("Failed to fetch user data:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.id]: e.target.value,
+    })
+  }
+
+  const handleSave = async () => {
+    try {
+      setSaving(true)
+      await axios.post("http://localhost:8080/api/user", {
+        id: userData?.id,
+        email: formData.email,
+        password: userData?.password || "",
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        panNumber: formData.panNumber,
+        phoneNumber: formData.phoneNumber,
+        createdAt: userData?.createdAt,
+        updatedAt: new Date().toISOString(),
+      })
+
+      toast({
+        title: "Success",
+        description: "Your profile has been updated successfully.",
+      })
+
+      // Refresh user data
+      await fetchUserData()
+    } catch (error) {
+      console.error("Failed to update user data:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const getInitials = () => {
+    if (!formData.firstName && !formData.lastName) return "U"
+    return `${formData.firstName.charAt(0)}${formData.lastName.charAt(0)}`.toUpperCase()
+  }
+
+  const getFullName = () => {
+    return `${formData.firstName} ${formData.lastName}`.trim() || "User"
+  }
 
   const openProfileDialog = (tab: string) => {
     setActiveTab(tab)
@@ -398,7 +494,7 @@ export function Navbar() {
           <MobileSidebar />
           <div className="flex items-center gap-4 flex-1">
             <div className="hidden md:block">
-              <h2 className="text-lg font-semibold">Welcome back, Anshul</h2>
+              <h2 className="text-lg font-semibold">Welcome back, {formData.firstName || "User"}</h2>
             </div>
             <div className="flex items-center gap-3 text-sm">
               <Badge variant="outline" className="gap-1">
@@ -483,17 +579,17 @@ export function Navbar() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                   <Avatar className="h-10 w-10">
-                    <AvatarImage src="/placeholder-avatar.jpg" alt="Anshul Kumar" />
-                    <AvatarFallback>AK</AvatarFallback>
+                    <AvatarImage src="/placeholder-avatar.jpg" alt={getFullName()} />
+                    <AvatarFallback>{getInitials()}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">Anshul Kumar</p>
+                    <p className="text-sm font-medium leading-none">{getFullName()}</p>
                     <p className="text-xs leading-none text-muted-foreground">
-                      anshul.kumar@example.com
+                      {formData.email || "user@example.com"}
                     </p>
                   </div>
                 </DropdownMenuLabel>
@@ -529,8 +625,8 @@ export function Navbar() {
             <TabsContent value="profile" className="space-y-4">
               <div className="flex items-center gap-4">
                 <Avatar className="h-20 w-20">
-                  <AvatarImage src="/placeholder-avatar.jpg" alt="Anshul Kumar" />
-                  <AvatarFallback>AK</AvatarFallback>
+                  <AvatarImage src="/placeholder-avatar.jpg" alt={getFullName()} />
+                  <AvatarFallback>{getInitials()}</AvatarFallback>
                 </Avatar>
                 <Button variant="outline">Change Photo</Button>
               </div>
@@ -539,28 +635,30 @@ export function Navbar() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="firstName">First Name</Label>
-                    <Input id="firstName" defaultValue="Anshul" />
+                    <Input id="firstName" value={formData.firstName} onChange={handleInputChange} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="lastName">Last Name</Label>
-                    <Input id="lastName" defaultValue="Kumar" />
+                    <Input id="lastName" value={formData.lastName} onChange={handleInputChange} />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" defaultValue="anshul.kumar@example.com" />
+                  <Input id="email" type="email" value={formData.email} onChange={handleInputChange} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input id="phone" defaultValue="+91 98765 43210" />
+                  <Label htmlFor="phoneNumber">Phone</Label>
+                  <Input id="phoneNumber" value={formData.phoneNumber} onChange={handleInputChange} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="pan">PAN Number</Label>
-                  <Input id="pan" defaultValue="ABCDE1234F" />
+                  <Label htmlFor="panNumber">PAN Number</Label>
+                  <Input id="panNumber" value={formData.panNumber} onChange={handleInputChange} />
                 </div>
               </div>
 
-              <Button>Save Changes</Button>
+              <Button onClick={handleSave} disabled={saving}>
+                {saving ? "Saving..." : "Save Changes"}
+              </Button>
             </TabsContent>
 
             <TabsContent value="settings" className="space-y-4">
