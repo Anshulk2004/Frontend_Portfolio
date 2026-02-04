@@ -1,105 +1,108 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { TrendingUp, TrendingDown, Briefcase, PiggyBank, LineChart, Shield } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Plus, Minus, ExternalLink, Coins, TrendingUp, Landmark } from "lucide-react"
+import Link from "next/link"
 
-const investments = [
+const breakdownData = [
   {
-    type: "Stocks",
-    icon: LineChart,
-    invested: 466875,
-    current: 520450,
-    returns: 53575,
-    returnPercent: 11.5,
-    holdings: 24,
+    category: "Stocks",
+    type: "Equity",
+    value: 842000,
+    invested: 620000,
+    count: 18,
+    icon: TrendingUp,
+    href: "/dashboard",
   },
   {
-    type: "Mutual Funds",
-    icon: Briefcase,
-    invested: 259375,
-    current: 290000,
-    returns: 30625,
-    returnPercent: 11.8,
-    holdings: 8,
+    category: "Parag Parikh Flexi Cap",
+    type: "Mutual Fund",
+    value: 245000,
+    invested: 180000,
+    count: 1,
+    icon: Landmark,
+    canOperate: true,
   },
   {
-    type: "SIP",
-    icon: PiggyBank,
-    invested: 155625,
-    current: 176660,
-    returns: 21035,
-    returnPercent: 13.5,
-    holdings: 5,
+    category: "Mirae Asset Large Cap",
+    type: "Mutual Fund",
+    value: 182000,
+    invested: 150000,
+    count: 1,
+    icon: Landmark,
+    canOperate: true,
   },
   {
-    type: "Bonds",
-    icon: Shield,
-    invested: 103750,
-    current: 109145,
-    returns: 5395,
-    returnPercent: 5.2,
-    holdings: 3,
+    category: "Physical Gold",
+    type: "Precious Metal",
+    value: 320000,
+    invested: 240000,
+    count: "40g",
+    icon: Coins,
+    canOperate: true,
   },
+  {
+    category: "Silver ETF",
+    type: "Precious Metal",
+    value: 45000,
+    invested: 38000,
+    count: "1kg eq.",
+    icon: Coins,
+    canOperate: true,
+  }
 ]
 
 export function InvestmentBreakdown() {
-  const formatINR = (value: number) => {
-    if (value >= 100000) {
-      return `Rs. ${(value / 100000).toFixed(2)}L`
-    }
-    return `Rs. ${value.toLocaleString('en-IN')}`
-  }
-
   return (
-    <Card className="bg-card border-border">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-semibold text-foreground">Investment Breakdown</CardTitle>
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg font-semibold">Asset Breakdown</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {investments.map((inv) => (
-            <div
-              key={inv.type}
-              className="p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
-                    <inv.icon className="w-5 h-5 text-accent" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-foreground">{inv.type}</p>
-                    <p className="text-sm text-muted-foreground">{inv.holdings} holdings</p>
-                  </div>
-                </div>
-                <div className={`flex items-center gap-1 ${
-                  inv.returnPercent >= 0 ? "text-success" : "text-destructive"
-                }`}>
-                  {inv.returnPercent >= 0 ? (
-                    <TrendingUp className="w-4 h-4" />
-                  ) : (
-                    <TrendingDown className="w-4 h-4" />
-                  )}
-                  <span className="font-medium">+{inv.returnPercent}%</span>
-                </div>
+      <CardContent className="space-y-4">
+        {breakdownData.map((item, i) => (
+          <div key={i} className="flex flex-col md:flex-row items-center justify-between p-4 rounded-xl border bg-muted/20 hover:bg-muted/30 transition-colors gap-4">
+            <div className="flex items-center gap-4 w-full md:w-1/3">
+              <div className="p-2 rounded-lg bg-background border shadow-sm">
+                <item.icon className="w-5 h-5 text-primary" />
               </div>
-              <div className="grid grid-cols-3 gap-4 mt-3 pt-3 border-t border-border">
-                <div>
-                  <p className="text-xs text-muted-foreground">Invested</p>
-                  <p className="font-medium text-foreground">{formatINR(inv.invested)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Current</p>
-                  <p className="font-medium text-foreground">{formatINR(inv.current)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Returns</p>
-                  <p className="font-medium text-success">+{formatINR(inv.returns)}</p>
-                </div>
+              <div>
+                <h4 className="font-bold text-sm leading-none mb-1">{item.category}</h4>
+                <p className="text-xs text-muted-foreground">{item.type} • {item.count}</p>
               </div>
             </div>
-          ))}
-        </div>
+
+            <div className="flex justify-around w-full md:w-1/3 text-center">
+              <div>
+                <p className="text-[10px] uppercase text-muted-foreground font-bold">Current</p>
+                <p className="text-sm font-semibold text-success">Rs. {item.value.toLocaleString('en-IN')}</p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase text-muted-foreground font-bold">Invested</p>
+                <p className="text-sm font-semibold">Rs. {item.invested.toLocaleString('en-IN')}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 justify-end w-full md:w-1/3">
+              {item.href ? (
+                <Button asChild variant="outline" size="sm" className="w-full md:w-auto">
+                  <Link href={item.href}>
+                    View Details <ExternalLink className="w-3 h-3 ml-2" />
+                  </Link>
+                </Button>
+              ) : (
+                <>
+                  <Button variant="outline" size="sm" className="h-8 border-success/50 text-success hover:bg-success/10">
+                    <Plus className="w-3 h-3 mr-1" /> Buy
+                  </Button>
+                  <Button variant="outline" size="sm" className="h-8 border-destructive/50 text-destructive hover:bg-destructive/10">
+                    <Minus className="w-3 h-3 mr-1" /> Sell
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        ))}
       </CardContent>
     </Card>
   )

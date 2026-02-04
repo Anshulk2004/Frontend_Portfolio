@@ -1,10 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
-
-// Initialize Gemini API
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
-// Enhanced system prompt with portfolio-specific knowledge
 const SYSTEM_PROMPT = `You are an expert portfolio assistant for a comprehensive investment tracking and management platform. You have deep knowledge of:
 
 **Core Competencies:**
@@ -61,7 +58,6 @@ const SYSTEM_PROMPT = `You are an expert portfolio assistant for a comprehensive
 
 When users ask about their portfolio, you can help them interpret their data, understand metrics, and learn about investment concepts. Ask clarifying questions to provide better assistance.`;
 
-// Portfolio knowledge base - add common investment terms and concepts
 const KNOWLEDGE_BASE = {
   metrics: {
     "P/L": "Profit and Loss - the difference between your current portfolio value and the total amount invested",
@@ -94,8 +90,6 @@ export async function POST(req: NextRequest) {
         { status: 500 }
       );
     }
-
-    // Build enhanced prompt with portfolio context if provided
     let enhancedPrompt = SYSTEM_PROMPT;
     
     if (portfolioContext) {
@@ -120,14 +114,11 @@ export async function POST(req: NextRequest) {
       
       enhancedPrompt += `\nUse this context to provide personalized insights when relevant. Help the user understand their portfolio performance and suggest areas they might want to explore or learn about.`;
     }
-
-    // Get the Gemini model
     const model = genAI.getGenerativeModel({ 
       model: "gemini-2.5-flash",
       systemInstruction: enhancedPrompt,
     });
 
-    // Format conversation history for Gemini
     const chatHistory = messages
       .slice(0, -1)
       .filter((msg: any) => msg.role === "user" || msg.role === "assistant")
@@ -136,20 +127,15 @@ export async function POST(req: NextRequest) {
         parts: [{ text: msg.content }],
       }));
 
-    // Only include history if it starts with a user message
     const validHistory = chatHistory.length > 0 && chatHistory[0].role === "user" 
       ? chatHistory 
       : [];
-
-    // Start chat with history
     const chat = model.startChat({
       history: validHistory,
     });
 
-    // Get the latest user message
     const userMessage = messages[messages.length - 1].content;
 
-    // Send message and get response
     const result = await chat.sendMessage(userMessage);
     const response = result.response;
     const text = response.text();
@@ -161,8 +147,6 @@ export async function POST(req: NextRequest) {
 
   } catch (error: any) {
     console.error("Chat API Error:", error);
-    
-    // Handle rate limiting specifically
     if (error.status === 429) {
       return NextResponse.json(
         { 
