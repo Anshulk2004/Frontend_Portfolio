@@ -5,6 +5,7 @@ import { FeaturedCourses } from "@/components/playground/featured-courses"
 import { MyProgress } from "@/components/playground/my-progress"
 import { ContinueLearning } from "@/components/playground/continue-learning"
 import { Achievements } from "@/components/playground/achievements"
+import { LearningStats } from "@/components/playground/learning-stats"
 import { CoursesProvider } from "@/components/playground/courses-context"
 
 // 1. Create a separate Content component
@@ -17,6 +18,8 @@ function PlaygroundContent() {
           <p className="text-muted-foreground">Manage your portfolio knowledge and courses</p>
         </div>
       </div>
+
+      <LearningStats />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">

@@ -1,82 +1,195 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react"
+import axios from "axios"
 
 export interface Course {
-  id?: string
+  id: number
   title: string
   instructor: string
   description?: string
   category?: string
   duration: string
-  price: string
-  originalPrice?: string; 
-  image: string
-  badge?: string;         
-  badgeColor?: string;    
+  price: number
   rating?: number
-  students?: number
-  progress?: number
-  completedLessons?: number
-  totalLessons?: number
+  studentsCount?: number
+  imageUrl?: string
+  createdAt?: string
+}
+
+export interface UserCourse {
+  id: number
+  user?: { id: number }
+  course: Course
+  progress: number
+  completedLessons: number
+  totalLessons: number
+  enrolledAt: string
+  lastAccessed: string
+}
+
+interface User {
+  id: number
+  name: string
+  email: string
 }
 
 interface CoursesContextType {
-  enrolledCourses: Course[]
+  courses: Course[]
+  userCourses: UserCourse[]
+  user: User | null
+  loading: boolean
+  fetchCourses: (category?: string) => void
+  fetchUserCourses: () => void
   enrollCourse: (course: Course) => void
   addCourseToDB: (course: Partial<Course>) => void
-  isEnrolled: (title: string) => boolean
+  updateProgress: (userCourseId: number, progress: number, completedLessons: number) => void
+  isEnrolled: (courseId: number) => boolean
   playCourse: () => void
 }
 
 const CoursesContext = createContext<CoursesContextType | undefined>(undefined)
 
 export function CoursesProvider({ children }: { children: ReactNode }) {
-  const [enrolledCourses, setEnrolledCourses] = useState<Course[]>([])
+  const [courses, setCourses] = useState<Course[]>([])
+  const [userCourses, setUserCourses] = useState<UserCourse[]>([])
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(false)
 
-  // Load from LocalStorage on mount
+  // Fetch user on mount
   useEffect(() => {
-    const saved = localStorage.getItem("enrolled_courses")
-    if (saved) setEnrolledCourses(JSON.parse(saved))
+    fetchUser()
   }, [])
 
-  // Save to LocalStorage on change
+  // Fetch user courses when user is available
   useEffect(() => {
-    if (enrolledCourses.length > 0) {
-      localStorage.setItem("enrolled_courses", JSON.stringify(enrolledCourses))
+    if (user) {
+      fetchUserCourses()
     }
-  }, [enrolledCourses])
+  }, [user])
 
-  const enrollCourse = (course: Course) => {
-    if (!isEnrolled(course.title)) {
-      const newEnrollment = {
-        ...course,
+  const fetchUser = async () => {
+    try {
+      const response = await axios.get("http://localhost:8080/api/user")
+      setUser(response.data)
+    } catch (error) {
+      console.error("Error fetching user:", error)
+    }
+  }
+
+  const fetchCourses = async (category?: string) => {
+    setLoading(true)
+    try {
+      const params = category ? { category } : {}
+      const response = await axios.get("http://localhost:8080/api/courses", { params })
+      setCourses(response.data)
+    } catch (error) {
+      console.error("Error fetching courses:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchUserCourses = async () => {
+    if (!user) return
+    setLoading(true)
+    try {
+      const response = await axios.get("http://localhost:8080/api/user-courses", {
+        params: { userId: user.id }
+      })
+      setUserCourses(response.data)
+    } catch (error) {
+      console.error("Error fetching user courses:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const enrollCourse = async (course: Course) => {
+    if (!user) return
+    if (isEnrolled(course.id)) {
+      console.log("Already enrolled in this course")
+      return
+    }
+
+    try {
+      const response = await axios.post("http://localhost:8080/api/user-courses", {
+        user: { id: user.id },
+        course: { id: course.id },
         progress: 0,
         completedLessons: 0,
         totalLessons: 10,
+        enrolledAt: new Date().toISOString(),
+        lastAccessed: new Date().toISOString()
+      })
+      setUserCourses([response.data, ...userCourses])
+    } catch (error: any) {
+      if (error.response?.status === 409 || error.response?.data?.message?.includes("Duplicate")) {
+        console.log("Already enrolled in this course")
+        // Refresh to get latest enrollment status
+        fetchUserCourses()
+      } else {
+        console.error("Error enrolling in course:", error)
       }
-      setEnrolledCourses([newEnrollment, ...enrolledCourses])
     }
   }
 
-  const addCourseToDB = (courseData: Partial<Course>) => {
-    // This structure matches your backend: category, description, duration, instructor, price, title
-    console.log("Sending to Backend:", {
-      ...courseData,
-      createdAt: new Date().toISOString(),
-    })
-    // For now, we also enroll it locally so it shows up
-    enrollCourse(courseData as Course)
+  const addCourseToDB = async (courseData: Partial<Course>) => {
+    try {
+      const response = await axios.post("http://localhost:8080/api/courses", courseData)
+      setCourses([response.data, ...courses])
+    } catch (error) {
+      console.error("Error adding course:", error)
+    }
   }
 
-  const isEnrolled = (title: string) => enrolledCourses.some(c => c.title === title)
+  const updateProgress = async (userCourseId: number, progress: number, completedLessons: number) => {
+    try {
+      const userCourse = userCourses.find(uc => uc.id === userCourseId)
+      if (!userCourse) return
+
+      await axios.put(`http://localhost:8080/api/user-courses/${userCourseId}`, {
+        ...userCourse,
+        progress,
+        completedLessons,
+        lastAccessed: new Date().toISOString()
+      })
+      
+      // Update local state
+      setUserCourses(userCourses.map(uc => 
+        uc.id === userCourseId 
+          ? { ...uc, progress, completedLessons, lastAccessed: new Date().toISOString() }
+          : uc
+      ))
+    } catch (error) {
+      console.error("Error updating progress:", error)
+    } finally {
+      fetchUserCourses()
+    }
+  }
+
+  const isEnrolled = (courseId: number) => {
+    return userCourses.some(uc => uc.course.id === courseId)
+  }
 
   const playCourse = () => {
     window.open("https://www.youtube.com/watch?v=8TJQhQ2GZ0Y", "_blank")
   }
 
   return (
-    <CoursesContext.Provider value={{ enrolledCourses, enrollCourse, addCourseToDB, isEnrolled, playCourse }}>
+    <CoursesContext.Provider value={{ 
+      courses, 
+      userCourses, 
+      user,
+      loading,
+      fetchCourses, 
+      fetchUserCourses,
+      enrollCourse, 
+      addCourseToDB, 
+      updateProgress,
+      isEnrolled, 
+      playCourse 
+    }}>
       {children}
     </CoursesContext.Provider>
   )

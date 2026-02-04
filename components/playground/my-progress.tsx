@@ -1,23 +1,59 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { TrendingUp, Calendar, Star } from "lucide-react"
+import { useCourses } from "./courses-context"
 
-const weeklyProgress = [
-  { day: "Mon", hours: 2.5, target: 3 },
-  { day: "Tue", hours: 3, target: 3 },
-  { day: "Wed", hours: 1.5, target: 3 },
-  { day: "Thu", hours: 4, target: 3 },
-  { day: "Fri", hours: 2, target: 3 },
-  { day: "Sat", hours: 0, target: 3 },
-  { day: "Sun", hours: 0, target: 3 },
-]
-
-const totalWeekHours = weeklyProgress.reduce((acc, d) => acc + d.hours, 0)
-const targetWeekHours = weeklyProgress.reduce((acc, d) => acc + d.target, 0)
+const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 export function MyProgress() {
+  const { userCourses } = useCourses()
+  const [weeklyProgress, setWeeklyProgress] = useState<Array<{ day: string; hours: number; target: number }>>([])
+  const [totalWeekHours, setTotalWeekHours] = useState(0)
+  const [targetWeekHours, setTargetWeekHours] = useState(21) // 3 hours per day
+  const [xpProgress, setXpProgress] = useState({ current: 0, target: 1000, level: 12 })
+
+  useEffect(() => {
+    // Calculate weekly learning hours based on user courses
+    const progress = weekDays.map(day => ({
+      day,
+      hours: 0, // In real scenario, calculate from lastAccessed dates
+      target: 3
+    }))
+
+    // Simulate some progress based on enrolled courses
+    if (userCourses.length > 0) {
+      const hoursPerCourse = 2.5
+      const totalHours = userCourses.length * hoursPerCourse
+      const hoursPerDay = totalHours / 7
+      
+      progress.forEach((day, idx) => {
+        if (idx < 5) { // Mon-Fri have more activity
+          day.hours = Math.min(hoursPerDay * 1.5, 4)
+        } else {
+          day.hours = hoursPerDay * 0.5
+        }
+      })
+    }
+
+    setWeeklyProgress(progress)
+    const total = progress.reduce((acc, d) => acc + d.hours, 0)
+    setTotalWeekHours(total)
+
+    // Calculate XP based on course progress
+    const totalProgress = userCourses.reduce((acc, uc) => acc + uc.progress, 0)
+    const avgProgress = userCourses.length > 0 ? totalProgress / userCourses.length : 0
+    const xp = Math.floor(avgProgress * 10) // Convert progress to XP
+    
+    setXpProgress({
+      current: 850 + xp,
+      target: 1000,
+      level: 12 + Math.floor(xp / 150)
+    })
+  }, [userCourses])
+
   return (
     <Card className="bg-card border-border">
       <CardHeader className="pb-2">
@@ -32,7 +68,7 @@ export function MyProgress() {
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-foreground">Weekly Goal</span>
             <span className="text-sm text-muted-foreground">
-              {totalWeekHours}h / {targetWeekHours}h
+              {totalWeekHours.toFixed(1)}h / {targetWeekHours}h
             </span>
           </div>
           <Progress value={(totalWeekHours / targetWeekHours) * 100} className="h-2" />
@@ -70,12 +106,16 @@ export function MyProgress() {
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <Star className="w-5 h-5 text-warning fill-warning" />
-              <span className="font-medium text-foreground">Level 12</span>
+              <span className="font-medium text-foreground">Level {xpProgress.level}</span>
             </div>
-            <span className="text-sm text-muted-foreground">850 / 1000 XP</span>
+            <span className="text-sm text-muted-foreground">
+              {xpProgress.current} / {xpProgress.target} XP
+            </span>
           </div>
-          <Progress value={85} className="h-2" />
-          <p className="text-xs text-muted-foreground mt-2">150 XP to Level 13</p>
+          <Progress value={(xpProgress.current / xpProgress.target) * 100} className="h-2" />
+          <p className="text-xs text-muted-foreground mt-2">
+            {xpProgress.target - xpProgress.current} XP to Level {xpProgress.level + 1}
+          </p>
         </div>
       </CardContent>
     </Card>
