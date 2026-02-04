@@ -13,6 +13,9 @@ import { TopMovers } from "@/components/dashboard/top-movers"
 
 interface Holding {
   id: number
+  user?: {
+    id: number
+  }
   symbol: string
   companyName: string
   sector: string
@@ -20,6 +23,7 @@ interface Holding {
   timePeriod: string
   quantity: number
   totalInvested: number
+  acquiredPrice?: number
   acquiredDate: string
   updatedAt: string
 }
