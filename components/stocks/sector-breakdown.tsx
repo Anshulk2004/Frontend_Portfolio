@@ -2,29 +2,94 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import { TrendingUp, TrendingDown } from "lucide-react"
+import { useMemo } from "react"
+import { Button } from "@/components/ui/button"
 
-const sectors = [
-  { name: "IT Services", count: 8, change: 1.85, color: "#4F46E5" },
-  { name: "Banking", count: 12, change: 0.92, color: "#10b981" },
-  { name: "Oil & Gas", count: 5, change: -0.65, color: "#f59e0b" },
-  { name: "Auto", count: 6, change: 2.45, color: "#ef4444" },
-  { name: "Pharma", count: 4, change: 1.12, color: "#8b5cf6" },
-  { name: "FMCG", count: 5, change: 0.45, color: "#06b6d4" },
-]
+interface MarketStock {
+  id: number
+  symbol: string
+  companyName: string
+  sector: string
+  marketCap: number
+  peRatio: number
+  high52Week: number
+  low52Week: number
+  volume: number
+  dividends: number
+  lastUpdated: string
+}
 
-const total = sectors.reduce((acc, s) => acc + s.count, 0)
+interface SectorBreakdownProps {
+  stocks: MarketStock[]
+  onSectorClick?: (sector: string | null) => void
+  selectedSector?: string | null
+}
 
-export function SectorBreakdown() {
+const sectorColors: Record<string, string> = {
+  "IT Services": "#4F46E5",
+  "Banking": "#10b981",
+  "Oil & Gas": "#f59e0b",
+  "Auto": "#ef4444",
+  "Pharma": "#8b5cf6",
+  "FMCG": "#06b6d4",
+  "Telecom": "#ec4899",
+  "Infrastructure": "#14b8a6",
+  "Consumer": "#f97316",
+  "Conglomerate": "#6366f1",
+}
+
+const getColorForSector = (sector: string, index: number): string => {
+  return sectorColors[sector] || `hsl(${(index * 360) / 10}, 70%, 50%)`
+}
+
+export function SectorBreakdown({ stocks, onSectorClick, selectedSector }: SectorBreakdownProps) {
+  const sectors = useMemo(() => {
+    const sectorMap = new Map<string, number>()
+    
+    stocks.forEach(stock => {
+      if (stock.sector) {
+        sectorMap.set(stock.sector, (sectorMap.get(stock.sector) || 0) + 1)
+      }
+    })
+    
+    return Array.from(sectorMap.entries())
+      .map(([name, count], index) => ({
+        name,
+        count,
+        color: getColorForSector(name, index)
+      }))
+      .sort((a, b) => b.count - a.count)
+  }, [stocks])
+
+  const total = sectors.reduce((acc, s) => acc + s.count, 0)
+
   return (
     <Card className="bg-card border-border">
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-semibold text-foreground">Sector Breakdown</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg font-semibold text-foreground">Sector Breakdown</CardTitle>
+          {selectedSector && onSectorClick && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => onSectorClick(null)}
+              className="text-xs"
+            >
+              Clear Filter
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
           {sectors.map((sector) => (
-            <div key={sector.name} className="space-y-2">
+            <div 
+              key={sector.name} 
+              className={`space-y-2 ${onSectorClick ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''} ${
+                selectedSector === sector.name ? 'ring-2 ring-primary rounded-lg p-2 -m-2' : ''
+              }`}
+              onClick={() => onSectorClick && onSectorClick(sector.name)}
+            >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div
@@ -35,16 +100,6 @@ export function SectorBreakdown() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">{sector.count} stocks</span>
-                  <div className={`flex items-center gap-0.5 text-xs ${
-                    sector.change >= 0 ? "text-success" : "text-destructive"
-                  }`}>
-                    {sector.change >= 0 ? (
-                      <TrendingUp className="w-3 h-3" />
-                    ) : (
-                      <TrendingDown className="w-3 h-3" />
-                    )}
-                    {sector.change >= 0 ? "+" : ""}{sector.change}%
-                  </div>
                 </div>
               </div>
               <Progress

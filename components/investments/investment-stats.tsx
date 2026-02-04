@@ -5,73 +5,66 @@ import {
   TrendingUp,
   TrendingDown,
   IndianRupee,
-  PiggyBank,
-  Calendar,
-  Percent,
   ArrowUpRight,
   ArrowDownRight,
 } from "lucide-react"
 
-const stats = [
-  {
-    title: "Total Invested",
-    value: "Rs. 10,37,500",
-    change: "+Rs. 68,750",
-    changePercent: "+7.1%",
-    trend: "up",
-    icon: IndianRupee,
-    description: "All time investment",
-  },
-  {
-    title: "Total Returns",
-    value: "Rs. 1,52,000",
-    change: "+Rs. 20,400",
-    changePercent: "+15.5%",
-    trend: "up",
-    icon: TrendingUp,
-    description: "Cumulative returns",
-  },
-  {
-    title: "This Month",
-    value: "Rs. 31,830",
-    change: "+Rs. 4,830",
-    changePercent: "+17.9%",
-    trend: "up",
-    icon: Calendar,
-    description: "Monthly returns",
-  },
-  // {
-  //   title: "Avg. Returns",
-  //   value: "12.4%",
-  //   change: "+2.1%",
-  //   changePercent: "",
-  //   trend: "up",
-  //   icon: Percent,
-  //   description: "Annual average",
-  // },
-  {
-    title: "Net Profit",
-    value: "Rs. 1,28,500",
-    change: "+Rs. 15,420",
-    changePercent: "+13.6%",
-    trend: "up",
-    icon: ArrowUpRight,
-    description: "After fees",
-  },
-  {
-    title: "Net Loss",
-    value: "Rs. 23,500",
-    change: "-Rs. 2,670",
-    changePercent: "-10.2%",
-    trend: "down",
-    icon: ArrowDownRight,
-    description: "Total losses",
-  },
-]
+interface InvestmentStatsProps {
+  totalInvested: number
+  totalReturns: number
+  returnsPercentage: number
+}
 
-export function InvestmentStats() {
+export function InvestmentStats({ totalInvested, totalReturns, returnsPercentage }: InvestmentStatsProps) {
+  const formatINR = (value: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value).replace('₹', 'Rs. ')
+  }
+
+  const netProfit = totalReturns > 0 ? totalReturns : 0
+  const netLoss = totalReturns < 0 ? Math.abs(totalReturns) : 0
+
+  const stats = [
+    {
+      title: "Total Invested",
+      value: formatINR(totalInvested),
+      change: totalInvested > 0 ? `${returnsPercentage > 0 ? '+' : ''}${returnsPercentage.toFixed(2)}%` : "0%",
+      trend: totalReturns >= 0 ? "up" : "down",
+      icon: IndianRupee,
+      description: "All time investment",
+    },
+    {
+      title: "Total Returns",
+      value: formatINR(totalReturns),
+      change: `${totalReturns >= 0 ? '+' : ''}${formatINR(totalReturns)}`,
+      trend: totalReturns >= 0 ? "up" : "down",
+      icon: TrendingUp,
+      description: "Cumulative returns",
+    },
+    {
+      title: "Net Profit",
+      value: formatINR(netProfit),
+      change: `${returnsPercentage >= 0 ? '+' : ''}${returnsPercentage.toFixed(2)}%`,
+      trend: "up",
+      icon: ArrowUpRight,
+      description: "Profit earned",
+    },
+    {
+      title: "Net Loss",
+      value: formatINR(netLoss),
+      change: netLoss > 0 ? `-${formatINR(netLoss)}` : formatINR(0),
+      trend: "down",
+      icon: ArrowDownRight,
+      description: "Total losses",
+    },
+  ]
+
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6 gap-3 md:gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
       {stats.map((stat) => (
         <Card key={stat.title} className="bg-card border-border">
           <CardContent className="p-3 md:p-4">
@@ -94,10 +87,7 @@ export function InvestmentStats() {
               ) : (
                 <TrendingDown className="w-3 h-3" />
               )}
-              <span>{stat.change}</span>
-              {stat.changePercent && (
-                <span className="text-muted-foreground hidden sm:inline">({stat.changePercent})</span>
-              )}
+              <span className="truncate">{stat.change}</span>
             </div>
           </CardContent>
         </Card>
