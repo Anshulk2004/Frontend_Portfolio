@@ -1,112 +1,89 @@
 "use client"
 
-import { createContext, useContext, useState, ReactNode } from "react"
+import { createContext, useContext, useState, useEffect, ReactNode } from "react"
 
 export interface Course {
+  id?: string
   title: string
   instructor: string
-  rating: number
-  students: number
+  description?: string
+  category?: string
   duration: string
   price: string
-  originalPrice: string
+  originalPrice?: string; 
   image: string
-  badge: string
-  badgeColor: string
+  badge?: string;         
+  badgeColor?: string;    
+  rating?: number
+  students?: number
   progress?: number
-  totalLessons?: number
   completedLessons?: number
-  nextLesson?: string
+  totalLessons?: number
 }
 
 interface CoursesContextType {
   enrolledCourses: Course[]
   enrollCourse: (course: Course) => void
+  addCourseToDB: (course: Partial<Course>) => void
   isEnrolled: (title: string) => boolean
+  playCourse: () => void
 }
 
 const CoursesContext = createContext<CoursesContextType | undefined>(undefined)
 
 export function CoursesProvider({ children }: { children: ReactNode }) {
-  const [enrolledCourses, setEnrolledCourses] = useState<Course[]>([
-    {
-      title: "Technical Analysis Masterclass",
-      instructor: "Rajesh Sharma",
-      progress: 65,
-      totalLessons: 24,
-      completedLessons: 16,
-      nextLesson: "Understanding Candlestick Patterns",
-      duration: "45 min",
-      image: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=300&h=200&fit=crop",
-      rating: 4.8,
-      students: 8500,
-      price: "Rs. 4,999",
-      originalPrice: "Rs. 9,999",
-      badge: "Bestseller",
-      badgeColor: "warning",
-    },
-    {
-      title: "Portfolio Management Fundamentals",
-      instructor: "Priya Patel",
-      progress: 40,
-      totalLessons: 18,
-      completedLessons: 7,
-      nextLesson: "Risk Assessment Strategies",
-      duration: "30 min",
-      image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=300&h=200&fit=crop",
-      rating: 4.7,
-      students: 6200,
-      price: "Rs. 3,499",
-      originalPrice: "Rs. 6,999",
-      badge: "Popular",
-      badgeColor: "default",
-    },
-    {
-      title: "Options Trading for Beginners",
-      instructor: "Vikram Mehta",
-      progress: 25,
-      totalLessons: 20,
-      completedLessons: 5,
-      nextLesson: "Call and Put Options Explained",
-      duration: "35 min",
-      image: "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?w=300&h=200&fit=crop",
-      rating: 4.9,
-      students: 4500,
-      price: "Rs. 5,999",
-      originalPrice: "Rs. 11,999",
-      badge: "Advanced",
-      badgeColor: "secondary",
-    },
-  ])
+  const [enrolledCourses, setEnrolledCourses] = useState<Course[]>([])
+
+  // Load from LocalStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem("enrolled_courses")
+    if (saved) setEnrolledCourses(JSON.parse(saved))
+  }, [])
+
+  // Save to LocalStorage on change
+  useEffect(() => {
+    if (enrolledCourses.length > 0) {
+      localStorage.setItem("enrolled_courses", JSON.stringify(enrolledCourses))
+    }
+  }, [enrolledCourses])
 
   const enrollCourse = (course: Course) => {
     if (!isEnrolled(course.title)) {
-      const enrolledCourse: Course = {
+      const newEnrollment = {
         ...course,
         progress: 0,
-        totalLessons: 20,
         completedLessons: 0,
-        nextLesson: "Introduction to the Course",
+        totalLessons: 10,
       }
-      setEnrolledCourses([enrolledCourse, ...enrolledCourses])
+      setEnrolledCourses([newEnrollment, ...enrolledCourses])
     }
   }
 
-  const isEnrolled = (title: string) => {
-    return enrolledCourses.some(c => c.title === title)
+  const addCourseToDB = (courseData: Partial<Course>) => {
+    // This structure matches your backend: category, description, duration, instructor, price, title
+    console.log("Sending to Backend:", {
+      ...courseData,
+      createdAt: new Date().toISOString(),
+    })
+    // For now, we also enroll it locally so it shows up
+    enrollCourse(courseData as Course)
+  }
+
+  const isEnrolled = (title: string) => enrolledCourses.some(c => c.title === title)
+
+  const playCourse = () => {
+    window.open("https://www.youtube.com/watch?v=8TJQhQ2GZ0Y", "_blank")
   }
 
   return (
-    <CoursesContext.Provider value={{ enrolledCourses, enrollCourse, isEnrolled }}>
+    <CoursesContext.Provider value={{ enrolledCourses, enrollCourse, addCourseToDB, isEnrolled, playCourse }}>
       {children}
     </CoursesContext.Provider>
   )
 }
 
-export function useCourses() {
+export const useCourses = () => {
   const context = useContext(CoursesContext)
-  if (context === undefined) {
-    throw new Error("useCourses must be used within a CoursesProvider")
-  }
+  if (!context) throw new Error("useCourses must be used within Provider")
   return context
 }
