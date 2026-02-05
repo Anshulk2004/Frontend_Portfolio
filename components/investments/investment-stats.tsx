@@ -1,44 +1,30 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { TrendingUp, TrendingDown, IndianRupee, ArrowUpRight, Landmark } from "lucide-react"
-import { MUTUAL_FUNDS, COMMODITIES, USD_TO_INR } from "@/constants/market-data"
 
-export function InvestmentStats() {
-  const [totals, setTotals] = useState({ invested: 0, current: 0 });
+interface InvestmentStatsProps {
+  totalInvested: number
+  totalCurrentValue: number
+  totalReturns: number
+  returnsPercentage: number
+}
 
-  const calculate = () => {
-    const saved = localStorage.getItem("my_portfolio");
-    if (!saved) return;
-    const portfolio = JSON.parse(saved);
-    let inv = 0, cur = 0;
-
-    portfolio.forEach((item: any) => {
-      inv += item.invested;
-      const live = item.type === "MF" ? MUTUAL_FUNDS.find(f => f.id === item.id) : COMMODITIES.find(c => c.id === item.id);
-      if (live) {
-        const price = "nav" in live ? live.nav : live.priceUSD * USD_TO_INR;
-        cur += item.units * price;
-      }
-    });
-    setTotals({ invested: inv, current: cur });
-  };
-
-  useEffect(() => {
-    calculate();
-    window.addEventListener("storage", calculate);
-    return () => window.removeEventListener("storage", calculate);
-  }, []);
-
-  const profit = totals.current - totals.invested;
-  const percentage = totals.invested > 0 ? (profit / totals.invested) * 100 : 0;
+export function InvestmentStats({ 
+  totalInvested, 
+  totalCurrentValue, 
+  totalReturns, 
+  returnsPercentage 
+}: InvestmentStatsProps) {
+  const profit = totalReturns
+  const percentage = returnsPercentage
 
   const cards = [
-    { title: "Total Invested", val: totals.invested, sub: `${percentage.toFixed(1)}%`, icon: IndianRupee, trend: profit >= 0 ? "up" : "down" },
+    { title: "Total Invested", val: totalInvested, sub: `${percentage.toFixed(1)}%`, icon: IndianRupee, trend: profit >= 0 ? "up" : "down" },
     { title: "Total Returns", val: profit, sub: `₹${profit.toLocaleString()}`, icon: TrendingUp, trend: profit >= 0 ? "up" : "down" },
     { title: "Net Profit", val: profit > 0 ? profit : 0, sub: `${percentage.toFixed(1)}%`, icon: ArrowUpRight, trend: "up" },
-    { title: "Diversification", val: "82/100", sub: "Healthy Mix", icon: Landmark, trend: "up", isScore: true },
+    { title: "Current Value", val: totalCurrentValue, sub: `${percentage >= 0 ? '+' : ''}${percentage.toFixed(1)}%`, icon: Landmark, trend: profit >= 0 ? "up" : "down" },
   ];
 
   return (
