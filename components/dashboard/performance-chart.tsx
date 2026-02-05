@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { RefreshCw, Download } from "lucide-react" // Added Download icon
+import { RefreshCw, Download } from "lucide-react"
 import {
   BarChart,
   Bar,
@@ -14,6 +14,8 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts"
+import jsPDF from "jspdf"
+import autoTable from "jspdf-autotable"
 
 interface Holding {
   id: number
@@ -35,6 +37,12 @@ interface Holding {
 interface PerformanceChartProps {
   holdings: Holding[]
   onRefresh?: () => void
+  totalInvested?: number
+  totalCurrentValue?: number
+  totalReturns?: number
+  returnsPercentage?: number
+  activePositions?: number
+  user?: any
 }
 
 const timeFilters = [
@@ -45,7 +53,16 @@ const timeFilters = [
   { label: "6M", value: "6mo" },
 ]
 
-export function PerformanceChart({ holdings, onRefresh }: PerformanceChartProps) {
+export function PerformanceChart({ 
+  holdings, 
+  onRefresh,
+  totalInvested = 0,
+  totalCurrentValue = 0,
+  totalReturns = 0,
+  returnsPercentage = 0,
+  activePositions = 0,
+  user
+}: PerformanceChartProps) {
   const [activeFilter, setActiveFilter] = useState("1mo")
   const [isRefreshing, setIsRefreshing] = useState(false)
 
@@ -123,15 +140,118 @@ export function PerformanceChart({ holdings, onRefresh }: PerformanceChartProps)
 
  
 
-  // Function to handle the download
-  const handleDownload = () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(performanceData, null, 2));
-    const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", `performance_${activeFilter}.json`);
-    document.body.appendChild(downloadAnchorNode);
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
+  // Function to handle PDF download
+  const handleDownload = async () => {
+    const doc = new jsPDF()
+    const todayHoldings = holdings.filter(h => h.timePeriod === "today")
+    
+    // Helper function to format currency properly
+    const formatCurrency = (value: number) => {
+      return value.toLocaleString('en-IN', { 
+        minimumFractionDigits: 2, 
+        maximumFractionDigits: 2 
+      })
+    }
+
+    const date = new Date().toLocaleDateString('en-IN')
+    const time = new Date().toLocaleTimeString('en-IN')
+    
+    // Add title
+    doc.setFontSize(20)
+    doc.setTextColor(79, 70, 229) // Primary color
+    doc.text("Portfolio Report", 14, 20)
+    
+    // User Information
+    if (user) {
+      doc.setFontSize(10)
+      doc.setTextColor(100, 100, 100)
+      const fullName = user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.firstName || user.lastName || 'N/A'
+      doc.text(`Generated for: ${fullName}`, 14, 28)
+      doc.text(`Email: ${user.email || 'N/A'}`, 14, 33)
+      doc.text(`User ID: ${user.id || 'N/A'}`, 14, 38)
+      doc.setTextColor(0, 0, 0)
+    }
+
+    // Date and Time
+    doc.setFontSize(10)
+    doc.text(`Generated on: ${date} at ${time}`, 14, user ? 45 : 28)
+    
+    // Portfolio Summary Section
+    doc.setFontSize(14)
+    doc.setTextColor(0, 0, 0)
+    doc.text("Portfolio Summary", 14, user ? 55 : 38)
+    
+    autoTable(doc, {
+      startY: user ? 60 : 43,
+      head: [['Metric', 'Value']],
+      body: [
+        ['Total Invested', `Rs. ${formatCurrency(totalInvested)}`],
+        ['Current Value', `Rs. ${formatCurrency(totalCurrentValue)}`],
+        ['Total Returns', `Rs. ${formatCurrency(totalReturns)}`],
+        ['Returns %', `${returnsPercentage >= 0 ? '+' : ''}${returnsPercentage.toFixed(2)}%`],
+        ['Active Positions', activePositions.toString()],
+      ],
+      theme: 'grid',
+      headStyles: { fillColor: [79, 70, 229], textColor: 255 },
+      styles: { fontSize: 10 },
+    })
+    
+    // Holdings Table
+    const finalY = (doc as any).lastAutoTable.finalY || 60
+    doc.setFontSize(14)
+    doc.text("Holdings Details", 14, finalY + 15)
+    
+    const holdingsData = todayHoldings.map(holding => {
+      const acquiredPrice = holding.acquiredPrice ?? (holding.totalInvested / holding.quantity)
+      const currentValue = holding.currentPrice * holding.quantity
+      const pnl = currentValue - holding.totalInvested
+      const pnlPercentage = holding.totalInvested > 0 ? (pnl / holding.totalInvested) * 100 : 0
+      
+      return [
+        holding.companyName,
+        holding.symbol.replace('.NS', ''),
+        holding.quantity.toString(),
+        `Rs. ${formatCurrency(acquiredPrice)}`,
+        `Rs. ${formatCurrency(holding.currentPrice)}`,
+        `Rs. ${formatCurrency(currentValue)}`,
+        `${pnl >= 0 ? '+' : ''}${pnlPercentage.toFixed(2)}%`
+      ]
+    })
+    
+    autoTable(doc, {
+      startY: finalY + 20,
+      head: [['Company', 'Symbol', 'Qty', 'Avg Price', 'Current Price', 'Value', 'P&L %']],
+      body: holdingsData,
+      theme: 'striped',
+      headStyles: { fillColor: [79, 70, 229], textColor: 255 },
+      styles: { fontSize: 8 },
+      columnStyles: {
+        0: { cellWidth: 45 },
+        1: { cellWidth: 25 },
+        2: { cellWidth: 15, halign: 'right' },
+        3: { cellWidth: 25, halign: 'right' },
+        4: { cellWidth: 25, halign: 'right' },
+        5: { cellWidth: 30, halign: 'right' },
+        6: { cellWidth: 20, halign: 'right' },
+      },
+    })
+    
+    // Footer
+    const pageCount = doc.getNumberOfPages()
+    doc.setFontSize(8)
+    doc.setTextColor(150, 150, 150)
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i)
+      doc.text(
+        `Page ${i} of ${pageCount}`,
+        doc.internal.pageSize.getWidth() / 2,
+        doc.internal.pageSize.height - 10,
+        { align: 'center' }
+      )
+    }
+    
+    // Save PDF
+    doc.save(`Portfolio_Report_${date.replace(/\//g, '-')}.pdf`)
   }
 
   const formatINR = (value: number) => {

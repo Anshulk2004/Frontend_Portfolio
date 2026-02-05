@@ -31,10 +31,21 @@ interface Holding {
 export default function DashboardPage() {
   const [holdings, setHoldings] = useState<Holding[]>([])
   const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState<any>(null)
 
   useEffect(() => {
     fetchHoldings()
+    fetchUser()
   }, [])
+
+  const fetchUser = async () => {
+    try {
+      const response = await axios.get("http://localhost:8080/api/user")
+      setUser(response.data)
+    } catch (error) {
+      console.error("Failed to fetch user:", error)
+    }
+  }
 
   const fetchHoldings = async () => {
     try {
@@ -150,7 +161,16 @@ export default function DashboardPage() {
       {/* Main Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         <div className="lg:col-span-2">
-          <PerformanceChart holdings={holdings} onRefresh={fetchHoldings} />
+          <PerformanceChart 
+            holdings={holdings} 
+            onRefresh={fetchHoldings}
+            totalInvested={totalInvested}
+            totalCurrentValue={totalCurrentValue}
+            totalReturns={totalReturns}
+            returnsPercentage={returnsPercentage}
+            activePositions={activePositions}
+            user={user}
+          />
         </div>
         <SectorAllocation sectorData={sectorAllocation} totalValue={totalCurrentValue} />
       </div>

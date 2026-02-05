@@ -100,7 +100,7 @@ export default function InvestmentsPage() {
 
           {/* Side-by-Side Section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-            <InvestmentAllocation holdings={todayHoldings} totalCurrentValue={totalCurrentValue} />
+            <InvestmentAllocation />
             <PersonalGoals />
           </div>
 

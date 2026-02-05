@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button"
 import { Star, StarOff, ChevronLeft, ChevronRight, MoreHorizontal, ShoppingCart, Eye, Download } from "lucide-react"
 import { useState, useEffect } from "react"
 import axios from "axios"
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -110,13 +112,112 @@ export function StocksTable({ stocks, onRefresh }: StocksTableProps) {
 
   // Added Download Functionality
   const handleDownload = () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(stocks, null, 2));
-    const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", "market_stocks.json");
-    document.body.appendChild(downloadAnchorNode);
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
+    const doc = new jsPDF()
+    
+    // Helper function to format currency
+    const formatCurrency = (value: number) => {
+      return value.toLocaleString('en-IN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      })
+    }
+
+    // Helper function to format large numbers
+    const formatNumber = (value: number) => {
+      if (value >= 1000000000) {
+        return `${(value / 1000000000).toFixed(2)}B`
+      } else if (value >= 1000000) {
+        return `${(value / 1000000).toFixed(2)}M`
+      } else if (value >= 1000) {
+        return `${(value / 1000).toFixed(2)}K`
+      }
+      return value.toLocaleString('en-IN')
+    }
+
+    const date = new Date().toLocaleDateString('en-IN')
+    const time = new Date().toLocaleTimeString('en-IN')
+
+    // Title
+    doc.setFontSize(20)
+    doc.setTextColor(79, 70, 229)
+    doc.text('Market Stocks Report', 14, 20)
+
+    // User Information
+    if (user) {
+      doc.setFontSize(10)
+      doc.setTextColor(100, 100, 100)
+      const fullName = user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.firstName || user.lastName || 'N/A'
+      doc.text(`Generated for: ${fullName}`, 14, 28)
+      doc.text(`Email: ${user.email || 'N/A'}`, 14, 33)
+      doc.text(`User ID: ${user.id || 'N/A'}`, 14, 38)
+      doc.setTextColor(0, 0, 0)
+    }
+
+    // Date and Time
+    doc.setFontSize(10)
+    doc.text(`Generated on: ${date} at ${time}`, 14, user ? 45 : 28)
+
+    // Market Summary
+    const totalStocks = stocks.length
+    const avgPrice = stocks.reduce((sum, s) => sum + s.CurrentPrice, 0) / totalStocks
+    const totalVolume = stocks.reduce((sum, s) => sum + s.Volume, 0)
+    const avgPE = stocks.reduce((sum, s) => sum + (s.PE_Ratio || 0), 0) / totalStocks
+
+    autoTable(doc, {
+      startY: user ? 50 : 33,
+      
+    })
+
+    // Stocks Table
+    const tableData = stocks.map(stock => [
+      stock.Symbol,
+      `Rs. ${formatCurrency(stock.CurrentPrice)}`,
+      stock.Sector || 'N/A',
+      formatNumber(stock.MarketCap),
+      stock.PE_Ratio ? Number(stock.PE_Ratio).toFixed(2) : 'N/A',
+      formatNumber(stock.Volume),
+    ])
+
+    autoTable(doc, {
+      startY: (doc as any).lastAutoTable.finalY + 10,
+      head: [['Symbol', 'Current Price', 'Sector', 'Market Cap', 'P/E Ratio', 'Volume']],
+      body: tableData,
+      theme: 'striped',
+      headStyles: {
+        fillColor: [79, 70, 229],
+        fontSize: 10,
+        fontStyle: 'bold',
+      },
+      styles: {
+        fontSize: 9,
+        cellPadding: 3,
+      },
+      columnStyles: {
+        0: { cellWidth: 25, fontStyle: 'bold' },
+        1: { cellWidth: 30, halign: 'right' },
+        2: { cellWidth: 30 },
+        3: { cellWidth: 28, halign: 'right' },
+        4: { cellWidth: 22, halign: 'center' },
+        5: { cellWidth: 25, halign: 'right' },
+      },
+    })
+
+    // Footer
+    const pageCount = (doc as any).internal.getNumberOfPages()
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i)
+      doc.setFontSize(8)
+      doc.setTextColor(150, 150, 150)
+      doc.text(
+        `Page ${i} of ${pageCount}`,
+        doc.internal.pageSize.getWidth() / 2,
+        doc.internal.pageSize.getHeight() - 10,
+        { align: 'center' }
+      )
+    }
+
+    // Save the PDF
+    doc.save(`Market_Stocks_Report_${date.replace(/\//g, '-')}.pdf`)
   }
 
   const confirmBuyStock = async () => {
