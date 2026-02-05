@@ -5,8 +5,7 @@ export function useQuantumSocket() {
   const [data, setData] = useState<any>(null);
 
   useEffect(() => {
-  // Adding a timestamp query forces the browser to ignore previous failed attempts
-  const socket = io("http://127.0.0.1:8000", {
+  const socket = io("http://127.0.0.1:8001", {
     transports: ["websocket", "polling"],
     query: { t: Date.now() }, 
     reconnection: true,

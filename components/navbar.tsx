@@ -62,14 +62,12 @@ export function Navbar() {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
     const s = seconds % 60;
-    // Returns "0h 0m 0s" format
     return `${h}h ${m}m ${s}s`;
   };
 
 
   const updateMarketStatus = () => {
     const now = new Date();
-    // Force IST (UTC + 5:30)
     const istOffset = 5.5 * 60 * 60 * 1000;
     const istTime = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + istOffset);
 
@@ -79,8 +77,8 @@ export function Navbar() {
     const seconds = istTime.getSeconds();
     const currentTotalSeconds = (hours * 3600) + (minutes * 60) + seconds;
 
-    const marketOpenSeconds = (9 * 3600) + (15 * 60);   // 9:15 AM
-    const marketCloseSeconds = (15 * 3600) + (30 * 60); // 3:30 PM
+    const marketOpenSeconds = (9 * 3600) + (15 * 60);   
+    const marketCloseSeconds = (15 * 3600) + (30 * 60); 
 
     const isWeekend = day === 0 || day === 6;
 
@@ -105,12 +103,8 @@ export function Navbar() {
   
   useEffect(() => {
     setMounted(true);
-    fetchUserData();
-    
-    // Run immediately on mount
+    fetchUserData();    
     updateMarketStatus();
-
-    // Update every second for the countdown
     const interval = setInterval(updateMarketStatus, 1000);
 
     return () => clearInterval(interval);
@@ -163,7 +157,6 @@ export function Navbar() {
         description: "Your profile has been updated successfully.",
       })
 
-      // Refresh user data
       await fetchUserData()
     } catch (error) {
       console.error("Failed to update user data:", error)
@@ -494,7 +487,4 @@ export function Navbar() {
     </>
   )
 }
-// function formatTime(arg0: number) {
-//   throw new Error("Function not implemented.")
-// }
 

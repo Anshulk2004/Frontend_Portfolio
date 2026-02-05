@@ -16,21 +16,18 @@ export function MyProgress() {
   const [xpProgress, setXpProgress] = useState({ current: 0, target: 1000, level: 12 })
 
   useEffect(() => {
-    // Calculate weekly learning hours based on user courses
     const progress = weekDays.map(day => ({
       day,
-      hours: 0, // In real scenario, calculate from lastAccessed dates
+      hours: 0, 
       target: 3
     }))
-
-    // Simulate some progress based on enrolled courses
     if (userCourses.length > 0) {
       const hoursPerCourse = 2.5
       const totalHours = userCourses.length * hoursPerCourse
       const hoursPerDay = totalHours / 7
       
       progress.forEach((day, idx) => {
-        if (idx < 5) { // Mon-Fri have more activity
+        if (idx < 5) { 
           day.hours = Math.min(hoursPerDay * 1.5, 4)
         } else {
           day.hours = hoursPerDay * 0.5
@@ -41,11 +38,9 @@ export function MyProgress() {
     setWeeklyProgress(progress)
     const total = progress.reduce((acc, d) => acc + d.hours, 0)
     setTotalWeekHours(total)
-
-    // Calculate XP based on course progress
     const totalProgress = userCourses.reduce((acc, uc) => acc + uc.progress, 0)
     const avgProgress = userCourses.length > 0 ? totalProgress / userCourses.length : 0
-    const xp = Math.floor(avgProgress * 10) // Convert progress to XP
+    const xp = Math.floor(avgProgress * 10) 
     
     setXpProgress({
       current: 850 + xp,

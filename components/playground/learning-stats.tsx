@@ -53,12 +53,9 @@ export function LearningStats() {
   ])
 
   useEffect(() => {
-    // Calculate stats from user courses
     const totalCourses = userCourses.length
     const completedCourses = userCourses.filter(uc => uc.progress === 100).length
-    const inProgressCourses = totalCourses - completedCourses
-    
-    // Calculate total hours based on course durations
+    const inProgressCourses = totalCourses - completedCourses    
     const totalHours = userCourses.reduce((acc, uc) => {
       const duration = uc.course.duration
       if (!duration) return acc
@@ -67,13 +64,11 @@ export function LearningStats() {
       return acc + (hours * completionRatio)
     }, 0)
 
-    // Calculate XP based on progress
     const totalXP = userCourses.reduce((acc, uc) => {
       return acc + (uc.progress * 10) + (uc.completedLessons * 50)
     }, 0)
     const level = Math.floor(totalXP / 1000) + 1
 
-    // Calculate goals progress
     const totalGoals = totalCourses
     const completedGoals = completedCourses
     const goalsProgress = totalGoals > 0 ? Math.floor((completedGoals / totalGoals) * 100) : 0

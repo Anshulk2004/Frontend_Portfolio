@@ -65,34 +65,21 @@ export function PerformanceChart({
 }: PerformanceChartProps) {
   const [activeFilter, setActiveFilter] = useState("1mo")
   const [isRefreshing, setIsRefreshing] = useState(false)
-
-  // Calculate performance data based on today's holdings
   const performanceData = useMemo(() => {
-    // Get today's holdings only (active stocks)
     const todayHoldings = holdings.filter(h => h.timePeriod === "today")
-    
-    // Get historical holdings for the selected period (for historical prices)
     const periodHoldings = holdings.filter(h => h.timePeriod === activeFilter)
     
     console.log('Active Filter:', activeFilter)
     console.log('Today Holdings:', todayHoldings.length)
     console.log('Period Holdings:', periodHoldings.length)
-    
-    // Create a map of historical prices by symbol
     const historicalPriceMap = new Map(
-      periodHoldings.map(h => [h.symbol, h.currentPrice])
-    )
-
-    // Calculate P&L for each stock based on performance over the time period
+      periodHoldings.map(h => [h.symbol, h.currentPrice])    )
     const stockPerformance = todayHoldings.map(holding => {
-      const quantity = holding.quantity  // Today's quantity
-      const acquiredPrice = holding.acquiredPrice  // Today's acquired price
-      
-      // For 1D (yesterday), use today's Flask price (already in holding.currentPrice)
-      // For other periods, use historical price from holdings table
+      const quantity = holding.quantity  
+      const acquiredPrice = holding.acquiredPrice  
       const comparisonPrice = activeFilter === "yesterday"
-        ? holding.currentPrice  // Flask API real-time price (already in today's holding)
-        : (historicalPriceMap.get(holding.symbol) || holding.currentPrice)  // Historical price or fallback
+        ? holding.currentPrice  
+        : (historicalPriceMap.get(holding.symbol) || holding.currentPrice)  
       
       console.log(`Stock: ${holding.symbol}, Acquired: ${acquiredPrice}, Comparison: ${comparisonPrice}`)
       

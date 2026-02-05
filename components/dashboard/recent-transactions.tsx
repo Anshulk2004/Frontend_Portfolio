@@ -34,7 +34,6 @@ export function RecentTransactions({ holdings }: RecentTransactionsProps) {
     try {
       setLoading(true)
       const response = await axios.get("http://localhost:8080/api/transactions")
-      // Sort by date descending and take first 6
       const sortedTransactions = response.data
         .sort((a: Transaction, b: Transaction) => 
           new Date(b.transactionDate).getTime() - new Date(a.transactionDate).getTime()

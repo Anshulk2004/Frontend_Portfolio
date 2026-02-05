@@ -40,7 +40,7 @@ export function StockChart({ stocks }: StockChartProps) {
       symbol: s.Symbol.replace('.NS', ''),
       name: s.Symbol.replace('.NS', ''),
       marketCap: s.MarketCap
-    })).slice(0, 10), // Top 10 by default
+    })).slice(0, 10), 
     [stocks]
   )
 

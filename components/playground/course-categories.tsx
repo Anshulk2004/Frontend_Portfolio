@@ -25,9 +25,7 @@ const categories = [
 export function CourseCategories() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const { addCourseToDB, fetchCourses, courses } = useCourses()
-  const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({})
-  
-  // State for the "Add Course" form
+  const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({})  
   const [newCourse, setNewCourse] = useState({
     title: "",
     instructor: "",
@@ -41,7 +39,6 @@ export function CourseCategories() {
   })
 
   useEffect(() => {
-    // Calculate category counts from courses
     const counts: Record<string, number> = {}
     categories.forEach(cat => {
       counts[cat.name] = courses.filter(c => c.category === cat.name).length
@@ -52,8 +49,7 @@ export function CourseCategories() {
   const handleAddCourse = async (e: React.FormEvent) => {
     e.preventDefault()
     await addCourseToDB(newCourse)
-    setIsAddModalOpen(false)
-    // Reset form
+    setIsAddModalOpen(false)    
     setNewCourse({ 
       ...newCourse, 
       title: "", 

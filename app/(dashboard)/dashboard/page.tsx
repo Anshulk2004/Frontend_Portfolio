@@ -57,14 +57,10 @@ export default function DashboardPage() {
 
       const holdingsData = holdingsResponse.data
       const stockPrices = stockDataResponse.data
-
-      // Create a map of stock symbols to current prices from Flask API
       const priceMap = new Map(
         stockPrices.map((stock: any) => [stock.Symbol, stock.CurrentPrice])
       )
 
-      // Update holdings with real-time prices from Flask API ONLY for "today" holdings
-      // Keep historical prices intact for other time periods
       const updatedHoldings = holdingsData.map((holding: Holding) => {
         if (holding.timePeriod === "today") {
           return {
@@ -72,7 +68,7 @@ export default function DashboardPage() {
             currentPrice: priceMap.get(holding.symbol) || holding.currentPrice
           }
         }
-        // For historical periods, keep the original currentPrice (which is historical price)
+       
         return holding
       })
 
@@ -83,13 +79,10 @@ export default function DashboardPage() {
       setLoading(false)
     }
   }
-
-  // Get most recent holding for each stock (priority: today > yesterday > 7d > 1mo > 3mo > 6mo)
   const getLatestHoldings = () => {
     const timePeriodPriority = ["today", "yesterday", "7d", "1mo", "3mo", "6mo"]
     const holdingsBySymbol = new Map<string, Holding>()
 
-    // Group holdings by symbol and keep the one with highest priority
     holdings.forEach(holding => {
       const existing = holdingsBySymbol.get(holding.symbol)
       if (!existing) {
@@ -97,7 +90,6 @@ export default function DashboardPage() {
       } else {
         const existingPriority = timePeriodPriority.indexOf(existing.timePeriod)
         const currentPriority = timePeriodPriority.indexOf(holding.timePeriod)
-        // Lower index = higher priority
         if (currentPriority < existingPriority) {
           holdingsBySymbol.set(holding.symbol, holding)
         }
@@ -108,18 +100,12 @@ export default function DashboardPage() {
   }
 
   const latestHoldings = getLatestHoldings()
-
-  // Filter holdings by "today" for current snapshot (only active holdings)
   const todayHoldings = holdings.filter(h => h.timePeriod === "today")
-
-  // Calculate aggregated metrics using today's holdings only
   const totalInvested = todayHoldings.reduce((sum, h) => sum + h.totalInvested, 0)
   const totalCurrentValue = todayHoldings.reduce((sum, h) => sum + (h.currentPrice * h.quantity), 0)
   const totalReturns = totalCurrentValue - totalInvested
   const returnsPercentage = totalInvested > 0 ? ((totalReturns / totalInvested) * 100) : 0
   const activePositions = todayHoldings.length
-
-  // Calculate sector allocation
   const sectorData = todayHoldings.reduce((acc, h) => {
     const currentValue = h.currentPrice * h.quantity
     acc[h.sector] = (acc[h.sector] || 0) + currentValue

@@ -18,8 +18,6 @@ export function Chatbot({ portfolioContext }: { portfolioContext?: any }) {
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-
-  // Initialize and Load History
   useEffect(() => {
     const savedChat = localStorage.getItem("portfolio_chat_history")
     if (savedChat) {
@@ -31,8 +29,6 @@ export function Chatbot({ portfolioContext }: { portfolioContext?: any }) {
       }])
     }
   }, [])
-
-  // Save History when messages change
   useEffect(() => {
     if (messages.length > 0) {
       localStorage.setItem("portfolio_chat_history", JSON.stringify(messages))

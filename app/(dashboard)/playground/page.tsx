@@ -8,7 +8,6 @@ import { Achievements } from "@/components/playground/achievements"
 import { LearningStats } from "@/components/playground/learning-stats"
 import { CoursesProvider } from "@/components/playground/courses-context"
 
-// 1. Create a separate Content component
 function PlaygroundContent() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto p-4">
@@ -37,8 +36,6 @@ function PlaygroundContent() {
     </div>
   )
 }
-
-// 2. The default export only handles the Provider
 export default function PlaygroundPage() {
   return (
     <CoursesProvider>

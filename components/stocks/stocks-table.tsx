@@ -110,7 +110,6 @@ export function StocksTable({ stocks, onRefresh }: StocksTableProps) {
     setBuyQuantity("")
   }
 
-  // Added Download Functionality
   const handleDownload = () => {
     const doc = new jsPDF()
     
@@ -229,7 +228,6 @@ export function StocksTable({ stocks, onRefresh }: StocksTableProps) {
     const totalCost = selectedStock.CurrentPrice * quantity
 
     try {
-      // Fetch wallet to deduct balance
       const walletsResponse = await axios.get("http://localhost:8080/api/wallets")
       if (walletsResponse.data.length > 0) {
         const wallet = walletsResponse.data[0]
@@ -240,14 +238,11 @@ export function StocksTable({ stocks, onRefresh }: StocksTableProps) {
           return
         }
 
-        // Update wallet balance
         await axios.put(`http://localhost:8080/api/wallets/${wallet.id}`, {
           ...wallet,
           balance: newBalance
         })
       }
-
-      // Create holding
       await axios.post("http://localhost:8080/api/holdings", {
         user: { id: user.id },
         symbol: selectedStock.Symbol,
@@ -261,7 +256,6 @@ export function StocksTable({ stocks, onRefresh }: StocksTableProps) {
         acquiredDate: new Date().toISOString().split('T')[0]
       })
 
-      // Create transaction
       await axios.post("http://localhost:8080/api/transactions", {
         user: { id: user.id },
         symbol: selectedStock.Symbol,
