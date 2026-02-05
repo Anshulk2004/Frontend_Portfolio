@@ -34,6 +34,7 @@ interface Holding {
 
 interface PerformanceChartProps {
   holdings: Holding[]
+  onRefresh?: () => void
 }
 
 const timeFilters = [
@@ -44,7 +45,7 @@ const timeFilters = [
   { label: "6M", value: "6mo" },
 ]
 
-export function PerformanceChart({ holdings }: PerformanceChartProps) {
+export function PerformanceChart({ holdings, onRefresh }: PerformanceChartProps) {
   const [activeFilter, setActiveFilter] = useState("1mo")
   const [isRefreshing, setIsRefreshing] = useState(false)
 
@@ -89,9 +90,16 @@ export function PerformanceChart({ holdings }: PerformanceChartProps) {
       .slice(0, 6)
   }, [holdings, activeFilter])
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsRefreshing(true)
-    setTimeout(() => setIsRefreshing(false), 1000)
+    try {
+      // Call parent's refresh function to fetch real-time data from Flask API
+      if (onRefresh) {
+        await onRefresh()
+      }
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 1000) // Keep spinner for UX
+    }
   }
 
   const formatINR = (value: number) => {

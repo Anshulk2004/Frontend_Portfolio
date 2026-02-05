@@ -39,8 +39,26 @@ export default function DashboardPage() {
   const fetchHoldings = async () => {
     try {
       setLoading(true)
-      const response = await axios.get("http://localhost:8080/api/holdings")
-      setHoldings(response.data)
+      const [holdingsResponse, stockDataResponse] = await Promise.all([
+        axios.get("http://localhost:8080/api/holdings"),
+        axios.get("http://localhost:8080/api/flask/stock-data")
+      ])
+
+      const holdingsData = holdingsResponse.data
+      const stockPrices = stockDataResponse.data
+
+      // Create a map of stock symbols to current prices
+      const priceMap = new Map(
+        stockPrices.map((stock: any) => [stock.Symbol, stock.CurrentPrice])
+      )
+
+      // Update holdings with real-time prices
+      const updatedHoldings = holdingsData.map((holding: Holding) => ({
+        ...holding,
+        currentPrice: priceMap.get(holding.symbol) || holding.currentPrice
+      }))
+
+      setHoldings(updatedHoldings)
     } catch (error) {
       console.error("Failed to fetch holdings:", error)
     } finally {
@@ -100,7 +118,7 @@ export default function DashboardPage() {
       {/* Main Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         <div className="lg:col-span-2">
-          <PerformanceChart holdings={holdings} />
+          <PerformanceChart holdings={holdings} onRefresh={fetchHoldings} />
         </div>
         <SectorAllocation sectorData={sectorAllocation} totalValue={totalCurrentValue} />
       </div>
