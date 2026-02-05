@@ -1,18 +1,34 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { io } from "socket.io-client";
 
 export function useQuantumSocket() {
   const [data, setData] = useState<any>(null);
 
   useEffect(() => {
-    const socket = new WebSocket("ws://localhost:8000/ws/quantum");
+  // Adding a timestamp query forces the browser to ignore previous failed attempts
+  const socket = io("http://127.0.0.1:8000", {
+    transports: ["websocket", "polling"],
+    query: { t: Date.now() }, 
+    reconnection: true,
+  });
 
-    socket.onmessage = (event) => {
-      const packet = JSON.parse(event.data);
-      setData(packet);
-    };
+  socket.on("connect", () => {
+    console.log("✅ ENGINE_CONNECTED_SUCCESSFULLY");
+  });
 
-    return () => socket.close();
-  }, []);
+  socket.on("quantum_update", (payload) => {
+    console.log("📡 SIGNAL_RECEIVED:", payload);
+    setData(payload);
+  });
+
+  socket.on("connect_error", (err) => {
+    console.log("❌ ATTEMPTING_RECONNECT:", err.message);
+  });
+
+  return () => {
+    socket.disconnect();
+  };
+}, []);
 
   return data;
 }

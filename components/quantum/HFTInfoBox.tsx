@@ -1,17 +1,22 @@
-"use client"
 export function HFTInfoBox() {
   return (
-    <div className="p-4 m-4 rounded-lg border border-primary/20 bg-primary/5 font-mono text-xs leading-relaxed">
-      <h3 className="text-primary font-bold mb-2 uppercase">Why Nifty 50 HFT?</h3>
-      <p className="mb-2">
-        High-Frequency Trading (HFT) exploits micro-inefficiencies in price Discovery. 
-        In the Nifty 50 index, high liquidity and heavy trading volumes create tight bid-ask spreads, making it the ideal environment for algorithms to execute thousands of orders in milliseconds.
-      </p>
-      <ul className="list-disc ml-4 space-y-1 opacity-80">
-        <li>Co-location: Minimizes physical distance to NSE servers.</li>
-        <li>Arbitrage: Captures gaps between Spot and Futures.</li>
-        <li>Micro-Ticks: Profits from 0.05 paise fluctuations.</li>
-      </ul>
+    <div className="p-6 m-4 rounded-xl border border-primary/20 bg-primary/5 backdrop-blur-md">
+      <h3 className="text-primary text-[10px] font-black mb-4 uppercase tracking-[0.2em]">Quantum Strategy</h3>
+      <div className="space-y-4 text-[11px] leading-relaxed text-white/70">
+        <p>
+          The <span className="text-white font-bold">QAOA (Quantum Approximate Optimization Algorithm)</span> finds the optimal asset basket by mapping the covariance matrix to a quantum Hamiltonian.
+        </p>
+        <div className="grid grid-cols-1 gap-2">
+          <div className="flex items-start gap-3 p-2 rounded bg-black/40 border border-white/5">
+            <span className="text-primary font-bold">01</span>
+            <span>Entanglement maps correlation between 6 Nifty assets instantly.</span>
+          </div>
+          <div className="flex items-start gap-3 p-2 rounded bg-black/40 border border-white/5">
+            <span className="text-primary font-bold">02</span>
+            <span>Cost function minimizes Portfolio Volatility (Risk).</span>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
