@@ -619,7 +619,7 @@ export function HoldingsTable({ holdings, onRefresh }: HoldingsTableProps) {
                   const { pnl, pnlPercentage } = calculatePnL(holding)
                   
                   return (
-                  <TableRow key={holding.symbol} className="border-border">
+                  <TableRow key={holding.id} className="border-border">
                     <TableCell>
                       <div>
                         <p className="font-medium text-foreground">{holding.companyName}</p>

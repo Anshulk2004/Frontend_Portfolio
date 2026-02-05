@@ -239,7 +239,7 @@ export function StocksTable({ stocks, onRefresh }: StocksTableProps) {
                       {stock.MarketCap ? `Rs. ${(stock.MarketCap / 10000000).toFixed(2)}L Cr` : 'N/A'}
                     </TableCell>
                     <TableCell className="text-right text-muted-foreground">
-                      {stock.PE_Ratio ? stock.PE_Ratio.toFixed(2) : 'N/A'}
+                      {stock.PE_Ratio ? Number(stock.PE_Ratio).toFixed(2) : 'N/A'}
                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>

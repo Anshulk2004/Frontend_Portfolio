@@ -43,7 +43,7 @@ export function SectorBreakdown({ stocks, onSectorClick, selectedSector }: Secto
     const sectorMap = new Map<string, number>()
     
     stocks.forEach(stock => {
-      if (stock.Sector) {
+      if (stock.Sector && stock.Sector.trim() !== '' && stock.Sector !== 'N/A') {
         sectorMap.set(stock.Sector, (sectorMap.get(stock.Sector) || 0) + 1)
       }
     })
