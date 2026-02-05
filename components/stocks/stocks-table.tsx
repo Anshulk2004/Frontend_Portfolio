@@ -10,7 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { Star, StarOff, ChevronLeft, ChevronRight, MoreHorizontal, ShoppingCart, Eye } from "lucide-react"
+import { Star, StarOff, ChevronLeft, ChevronRight, MoreHorizontal, ShoppingCart, Eye, Download } from "lucide-react"
 import { useState, useEffect } from "react"
 import axios from "axios"
 import { Input } from "@/components/ui/input"
@@ -108,6 +108,17 @@ export function StocksTable({ stocks, onRefresh }: StocksTableProps) {
     setBuyQuantity("")
   }
 
+  // Added Download Functionality
+  const handleDownload = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(stocks, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", "market_stocks.json");
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+  }
+
   const confirmBuyStock = async () => {
     if (!selectedStock || !user || !buyQuantity) return
 
@@ -182,8 +193,20 @@ export function StocksTable({ stocks, onRefresh }: StocksTableProps) {
       <Card className="bg-card border-border">
         <CardHeader className="pb-2 px-3 md:px-6">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base md:text-lg font-semibold text-foreground">All Stocks</CardTitle>
-            <span className="text-xs md:text-sm text-muted-foreground">{stocks.length} stocks</span>
+            <div className="flex flex-col">
+              <CardTitle className="text-base md:text-lg font-semibold text-foreground">All Stocks</CardTitle>
+              <span className="text-xs md:text-sm text-muted-foreground">{stocks.length} stocks</span>
+            </div>
+            {/* Added Download Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-2 text-xs"
+              onClick={handleDownload}
+            >
+              <Download className="h-3.5 w-3.5" />
+              Download Data
+            </Button>
           </div>
         </CardHeader>
         <CardContent className="px-0 md:px-6">

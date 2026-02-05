@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { RefreshCw } from "lucide-react"
+import { RefreshCw, Download } from "lucide-react" // Added Download icon
 import {
   BarChart,
   Bar,
@@ -50,19 +50,15 @@ export function PerformanceChart({ holdings }: PerformanceChartProps) {
 
   // Calculate performance data based on selected time period
   const performanceData = useMemo(() => {
-    // Get selected period holdings
     const periodHoldings = holdings.filter(h => h.timePeriod === activeFilter)
 
-    // Calculate P&L for each stock in the selected period
     const stockPerformance = periodHoldings.map(holding => {
       const quantity = holding.quantity
       const currentPrice = holding.currentPrice
       const acquiredPrice = holding.acquiredPrice
       
-      // Skip if no quantity or price data
       if (!quantity || !currentPrice) return null
 
-      // Calculate using acquired price if available, otherwise use totalInvested
       const investedAmount = acquiredPrice 
         ? acquiredPrice * quantity 
         : holding.totalInvested
@@ -83,7 +79,6 @@ export function PerformanceChart({ holdings }: PerformanceChartProps) {
       }
     }).filter(Boolean) as Array<{ name: string; companyName: string; profit: number; loss: number; pnl: number; currentValue: number; investedAmount: number; acquiredPrice?: number; currentPrice: number }>
 
-    // Sort by absolute P&L and take top 6 performers
     return stockPerformance
       .sort((a, b) => Math.abs(b.pnl) - Math.abs(a.pnl))
       .slice(0, 6)
@@ -92,6 +87,17 @@ export function PerformanceChart({ holdings }: PerformanceChartProps) {
   const handleRefresh = () => {
     setIsRefreshing(true)
     setTimeout(() => setIsRefreshing(false), 1000)
+  }
+
+  // Function to handle the download
+  const handleDownload = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(performanceData, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", `performance_${activeFilter}.json`);
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
   }
 
   const formatINR = (value: number) => {
@@ -106,6 +112,17 @@ export function PerformanceChart({ holdings }: PerformanceChartProps) {
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-lg font-semibold text-foreground">Performance Overview</CardTitle>
         <div className="flex items-center gap-2">
+          {/* Download Button added here */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 gap-2 text-xs"
+            onClick={handleDownload}
+          >
+            <Download className="h-3.5 w-3.5" />
+            Download
+          </Button>
+
           <div className="flex bg-muted rounded-lg p-1">
             {timeFilters.map((filter) => (
               <Button
