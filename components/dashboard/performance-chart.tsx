@@ -34,6 +34,7 @@ interface Holding {
 
 interface PerformanceChartProps {
   holdings: Holding[]
+  onRefresh?: () => void
 }
 
 const timeFilters = [
@@ -44,27 +45,52 @@ const timeFilters = [
   { label: "6M", value: "6mo" },
 ]
 
-export function PerformanceChart({ holdings }: PerformanceChartProps) {
+export function PerformanceChart({ holdings, onRefresh }: PerformanceChartProps) {
   const [activeFilter, setActiveFilter] = useState("1mo")
   const [isRefreshing, setIsRefreshing] = useState(false)
 
-  // Calculate performance data based on selected time period
+  // Calculate performance data based on today's holdings
   const performanceData = useMemo(() => {
+    // Get today's holdings only (active stocks)
+    const todayHoldings = holdings.filter(h => h.timePeriod === "today")
+    
+    // Get historical holdings for the selected period (for historical prices)
     const periodHoldings = holdings.filter(h => h.timePeriod === activeFilter)
+    
+    console.log('Active Filter:', activeFilter)
+    console.log('Today Holdings:', todayHoldings.length)
+    console.log('Period Holdings:', periodHoldings.length)
+    
+    // Create a map of historical prices by symbol
+    const historicalPriceMap = new Map(
+      periodHoldings.map(h => [h.symbol, h.currentPrice])
+    )
 
-    const stockPerformance = periodHoldings.map(holding => {
-      const quantity = holding.quantity
-      const currentPrice = holding.currentPrice
-      const acquiredPrice = holding.acquiredPrice
+    // Calculate P&L for each stock based on performance over the time period
+    const stockPerformance = todayHoldings.map(holding => {
+      const quantity = holding.quantity  // Today's quantity
+      const acquiredPrice = holding.acquiredPrice  // Today's acquired price
       
-      if (!quantity || !currentPrice) return null
+      // For 1D (yesterday), use today's Flask price (already in holding.currentPrice)
+      // For other periods, use historical price from holdings table
+      const comparisonPrice = activeFilter === "yesterday"
+        ? holding.currentPrice  // Flask API real-time price (already in today's holding)
+        : (historicalPriceMap.get(holding.symbol) || holding.currentPrice)  // Historical price or fallback
+      
+      console.log(`Stock: ${holding.symbol}, Acquired: ${acquiredPrice}, Comparison: ${comparisonPrice}`)
+      
+      // Skip if no quantity or price data
+      if (!quantity || !acquiredPrice || !comparisonPrice) {
+        console.log(`Skipping ${holding.symbol} - missing data`)
+        return null
+      }
 
-      const investedAmount = acquiredPrice 
-        ? acquiredPrice * quantity 
-        : holding.totalInvested
-      
-      const currentValue = currentPrice * quantity
-      const pnl = currentValue - investedAmount
+      // Calculate P&L: (comparison price - acquired price) × quantity
+      const investedAmount = acquiredPrice * quantity
+      const comparisonValue = comparisonPrice * quantity
+      const pnl = comparisonValue - investedAmount
+
+      console.log(`${holding.symbol} P&L:`, pnl)
 
       return {
         name: holding.symbol.replace('.NS', ''),
@@ -72,10 +98,10 @@ export function PerformanceChart({ holdings }: PerformanceChartProps) {
         profit: pnl > 0 ? pnl : 0,
         loss: pnl < 0 ? Math.abs(pnl) : 0,
         pnl,
-        currentValue,
+        currentValue: comparisonValue,
         investedAmount,
         acquiredPrice,
-        currentPrice
+        currentPrice: comparisonPrice
       }
     }).filter(Boolean) as Array<{ name: string; companyName: string; profit: number; loss: number; pnl: number; currentValue: number; investedAmount: number; acquiredPrice?: number; currentPrice: number }>
 
@@ -84,9 +110,26 @@ export function PerformanceChart({ holdings }: PerformanceChartProps) {
       .slice(0, 6)
   }, [holdings, activeFilter])
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsRefreshing(true)
-    setTimeout(() => setIsRefreshing(false), 1000)
+    try {
+      if (onRefresh) {
+        await onRefresh()
+      }
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 1000)
+    }
+  }
+
+  // Function to handle the download
+  const handleDownload = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(performanceData, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", `performance_${activeFilter}.json`);
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
   }
 
   // Function to handle the download
@@ -177,7 +220,7 @@ export function PerformanceChart({ holdings }: PerformanceChartProps) {
                     borderRadius: "8px",
                   }}
                   labelStyle={{ color: "var(--foreground)" }}
-                  formatter={(value: number, name: string) => [formatINR(value), name === "profit" ? "Profit" : "Loss"]}
+                  formatter={(value: number, name: string) => [formatINR(value), name === "Profit" ? "Profit" : "Loss"]}
                 />
                 <Legend />
                 <Bar dataKey="profit" name="Profit" fill="var(--success)" radius={[4, 4, 0, 0]} />

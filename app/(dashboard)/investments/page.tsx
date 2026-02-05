@@ -37,8 +37,31 @@ export default function InvestmentsPage() {
   const fetchHoldings = async () => {
     try {
       setLoading(true)
-      const response = await axios.get("http://localhost:8080/api/holdings")
-      setHoldings(response.data)
+      const [holdingsResponse, stockDataResponse] = await Promise.all([
+        axios.get("http://localhost:8080/api/holdings"),
+        axios.get("http://localhost:8080/api/flask/stock-data")
+      ])
+
+      const holdingsData = holdingsResponse.data
+      const stockPrices = stockDataResponse.data
+
+      // Create a map of stock symbols to current prices from Flask API
+      const priceMap = new Map(
+        stockPrices.map((stock: any) => [stock.Symbol, stock.CurrentPrice])
+      )
+
+      // Update holdings with real-time prices from Flask API ONLY for "today" holdings
+      const updatedHoldings = holdingsData.map((holding: Holding) => {
+        if (holding.timePeriod === "today") {
+          return {
+            ...holding,
+            currentPrice: priceMap.get(holding.symbol) || holding.currentPrice
+          }
+        }
+        return holding
+      })
+
+      setHoldings(updatedHoldings)
     } catch (error) {
       console.error("Failed to fetch holdings:", error)
     } finally {
@@ -68,6 +91,7 @@ export default function InvestmentsPage() {
         <>
           <InvestmentStats 
             totalInvested={totalInvested}
+            totalCurrentValue={totalCurrentValue}
             totalReturns={totalReturns}
             returnsPercentage={returnsPercentage}
           />
@@ -76,7 +100,7 @@ export default function InvestmentsPage() {
 
           {/* Side-by-Side Section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-            <InvestmentAllocation />
+            <InvestmentAllocation holdings={todayHoldings} totalCurrentValue={totalCurrentValue} />
             <PersonalGoals />
           </div>
 
