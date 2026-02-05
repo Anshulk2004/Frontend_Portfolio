@@ -126,7 +126,6 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
     } catch (error: any) {
       if (error.response?.status === 409 || error.response?.data?.message?.includes("Duplicate")) {
         console.log("Already enrolled in this course")
-        // Refresh to get latest enrollment status
         fetchUserCourses()
       } else {
         console.error("Error enrolling in course:", error)
@@ -155,7 +154,6 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
         lastAccessed: new Date().toISOString()
       })
       
-      // Update local state
       setUserCourses(userCourses.map(uc => 
         uc.id === userCourseId 
           ? { ...uc, progress, completedLessons, lastAccessed: new Date().toISOString() }

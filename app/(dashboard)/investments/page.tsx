@@ -44,13 +44,9 @@ export default function InvestmentsPage() {
 
       const holdingsData = holdingsResponse.data
       const stockPrices = stockDataResponse.data
-
-      // Create a map of stock symbols to current prices from Flask API
       const priceMap = new Map(
         stockPrices.map((stock: any) => [stock.Symbol, stock.CurrentPrice])
       )
-
-      // Update holdings with real-time prices from Flask API ONLY for "today" holdings
       const updatedHoldings = holdingsData.map((holding: Holding) => {
         if (holding.timePeriod === "today") {
           return {
@@ -69,7 +65,6 @@ export default function InvestmentsPage() {
     }
   }
 
-  // Calculate stats from holdings
   const todayHoldings = holdings.filter(h => h.timePeriod === "today")
   const totalInvested = todayHoldings.reduce((sum, h) => sum + h.totalInvested, 0)
   const totalCurrentValue = todayHoldings.reduce((sum, h) => sum + (h.currentPrice * h.quantity), 0)

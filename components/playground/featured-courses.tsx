@@ -63,8 +63,6 @@ export function FeaturedCourses() {
     </Card>
   )
 }
-
-// Sub-component for cleaner code
 function CourseItem({ course, isEnrolled, onEnroll, onPlay }: { 
   course: Course, 
   isEnrolled: boolean, 

@@ -16,7 +16,6 @@ export function InvestmentBreakdown() {
   const [history, setHistory] = useState<any[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
-  // Form State
   const [selectedAssetId, setSelectedAssetId] = useState("");
   const [quantity, setQuantity] = useState("");
   const [acquiredPrice, setAcquiredPrice] = useState("");

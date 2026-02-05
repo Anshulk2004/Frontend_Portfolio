@@ -61,13 +61,9 @@ const bottomNavItems = [
     icon: HelpCircle,
   },
 ]
-
-// Mobile sidebar sheet
 export function MobileSidebar() {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
-
-  // Close sidebar on route change
   useEffect(() => {
     setOpen(false)
   }, [pathname])
@@ -141,7 +137,6 @@ export function MobileSidebar() {
   )
 }
 
-// Desktop sidebar
 export function Sidebar() {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)

@@ -9,7 +9,7 @@ export function TerminalPriceChart({ liveData }: { liveData: any }) {
     if (liveData) {
       setChartData((prev) => {
         const newData = [...prev, { time: liveData.timestamp, price: liveData.price }]
-        return newData.slice(-30); // Keep last 30 data points
+        return newData.slice(-30); 
       })
     }
   }, [liveData])
