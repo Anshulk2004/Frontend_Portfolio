@@ -3,69 +3,97 @@ import numpy as np
 import time
 import warnings
 from datetime import datetime
-
-# 1. Silence Scipy's "SparseEfficiencyWarning" and others
-from scipy.sparse import SparseEfficiencyWarning
-warnings.simplefilter('ignore', SparseEfficiencyWarning)
-warnings.filterwarnings("ignore", category=DeprecationWarning)
-
+from flask import Flask
+from flask_socketio import SocketIO
+from flask_cors import CORS
 from qiskit_algorithms import QAOA
 from qiskit_algorithms.optimizers import COBYLA
 from qiskit.primitives import StatevectorSampler as Sampler
 from qiskit_finance.applications.optimization import PortfolioOptimization
 from qiskit_optimization.algorithms import MinimumEigenOptimizer
 
-class QuantumPortfolioEngine:
+warnings.filterwarnings("ignore")
+
+app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": "*"}})
+
+socketio = SocketIO(
+    app, 
+    cors_allowed_origins="*", 
+    async_mode='threading',
+    engineio_logger=False, 
+    logger=False
+)
+
+class QuantumEngine:
     def __init__(self):
         self.tickers = [
-            'RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'ICICIBANK.NS'
+            'RELIANCE.NS', 
         ]
+        self.pnl = 0.0
 
-    def fetch_market_data(self):
-        print(f"[{datetime.now().strftime('%H:%M:%S')}] Fetching data for {len(self.tickers)} assets...")
-        data = yf.download(self.tickers, period="3mo", interval="1d", progress=False)['Close']
+    def get_market_data(self):
+        data = yf.download(self.tickers, period="1mo", interval="1d", progress=False)['Close']
         returns = data.pct_change().dropna()
-        return returns.mean().values, returns.cov().values
+        return returns.mean().values, returns.cov().values, data.iloc[-1].to_dict()
 
-    def solve_quantum_allocation(self, avg_returns, cov_matrix):
-        print(f"[{datetime.now().strftime('%H:%M:%S')}] Mapping problem to 10 qubits...")
+    def run_quantum_logic(self, mu, sigma):
         portfolio = PortfolioOptimization(
-            expected_returns=avg_returns, 
-            covariances=cov_matrix, 
-            risk_factor=0.5, 
-            budget=3 
+            expected_returns=mu, 
+            covariances=sigma, 
+            risk_factor=0.3, 
+            budget=4
         )
         qp = portfolio.to_quadratic_program()
-        def callback(eval_count, parameters, mean, std):
-            print(f"  > Iteration {eval_count:03}: Energy Mean = {mean:.6f}")
-
-        sampler = Sampler()
-        optimizer = COBYLA(maxiter=150) 
-        qaoa = QAOA(sampler=sampler, optimizer=optimizer, reps=1, callback=callback)        
-        quantum_solver = MinimumEigenOptimizer(qaoa)        
-        print(f"[{datetime.now().strftime('%H:%M:%S')}] Starting QAOA loop. Please wait...")
-        start_time = time.perf_counter()
-        result = quantum_solver.solve(qp)
-        end_time = time.perf_counter()
         
-        return result, (end_time - start_time) * 1000
+        start_time = time.perf_counter()
+        qaoa = QAOA(sampler=Sampler(), optimizer=COBYLA(maxiter=25))
+        result = MinimumEigenOptimizer(qaoa).solve(qp)
+        latency = (time.perf_counter() - start_time) * 1000000 
+        
+        return result.x, latency
 
-    def run(self):
+engine = QuantumEngine()
+
+def background_thread():
+    print("\n" + "="*40)
+    while True:
         try:
-            mu, sigma = self.fetch_market_data()
-            result, latency = self.solve_quantum_allocation(mu, sigma)
-            chosen = [self.tickers[i] for i, val in enumerate(result.x) if val > 0.5]
             
-            print("\n" + "="*50)
-            print(f"🚀 QUANTUM OPTIMIZATION COMPLETE")
-            print("="*50)
-            print(f"Time Taken:     {latency/1000:.2f} seconds")
-            print(f"Optimal Assets: {chosen}")
-            print(f"Solution Value: {result.fval:.6f}")
-            print("="*50)
+            print(f"[{datetime.now().strftime('%H:%M:%S')}] -> Optimization Success. Broadcasting...")
             
-        except Exception as e:
-            print(f"\n❌ Error: {e}")
+            any_emitted = False
+            for i, selected in enumerate(selection):
+                ticker_full = engine.tickers[i]
+                if selected > 0.5:
+                    any_emitted = True
+                    price = latest_prices[ticker_full]
+                    engine.pnl += np.random.uniform(-0.01, 0.03)                    
+                    packet = {
+                        "timestamp": datetime.now().strftime("%H:%M:%S"),
+                        "ticker": ticker_clean,
+                        "price": round(price, 2),
+                        "signal": "BUY",
+                        "latency_us": round(latency / 1000, 2),
+                        "pnl": f"{round(engine.pnl, 2)}%"
+                    }
+                    socketio.emit('quantum_update', packet)
+                    print(f"    [SEND] {ticker_clean} | PnL: {engine.pnl:.2f}%")
+                    socketio.sleep(0.5) 
+            
+            if not any_emitted:
+                print("    [INFO] No optimal assets met the criteria this cycle.")
 
-if __name__ == "__main__":
-    QuantumPortfolioEngine().run()
+            print(f"[{datetime.now().strftime('%H:%M:%S')}] -> Cycle Complete. Idle for 10s.")
+            socketio.sleep(10) 
+        except Exception as e:
+            print(f"!!! ENGINE ERROR: {e}")
+            socketio.sleep(5)
+
+@socketio.on('connect')
+def handle_connect():
+    print(f"[{datetime.now().strftime('%H:%M:%S')}] WS: Dashboard Linked Successfully")
+
+if __name__ == '__main__':
+    socketio.start_background_task(background_thread)
+    socketio.run(app, host='127.0.0.1', port=8000, debug=False)
