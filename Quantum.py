@@ -28,7 +28,8 @@ socketio = SocketIO(
 class QuantumEngine:
     def __init__(self):
         self.tickers = [
-            'RELIANCE.NS', 
+            'RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 
+            'ICICIBANK.NS'
         ]
         self.pnl = 0.0
 
@@ -57,14 +58,23 @@ engine = QuantumEngine()
 
 def background_thread():
     print("\n" + "="*40)
+    print("CORE: 10-QUBIT Quantum Engine Active")
+    print("="*40)
     while True:
         try:
+            print(f"[{datetime.now().strftime('%H:%M:%S')}] -> Fetching Market Data...")
+            mu, sigma, latest_prices = engine.get_market_data()
+            
+            print(f"[{datetime.now().strftime('%H:%M:%S')}] -> Running QAOA (10 Qubits)...")
+            selection, latency = engine.run_quantum_logic(mu, sigma)
             
             print(f"[{datetime.now().strftime('%H:%M:%S')}] -> Optimization Success. Broadcasting...")
             
             any_emitted = False
             for i, selected in enumerate(selection):
                 ticker_full = engine.tickers[i]
+                ticker_clean = ticker_full.replace(".NS", "")
+                print(f"DEBUG: Processing {ticker_clean} through Quantum Engine (Selection Value: {selected})")
                 if selected > 0.5:
                     any_emitted = True
                     price = latest_prices[ticker_full]
