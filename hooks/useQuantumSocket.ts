@@ -5,29 +5,33 @@ export function useQuantumSocket() {
   const [data, setData] = useState<any>(null);
 
   useEffect(() => {
-  const socket = io("http://127.0.0.1:8001", {
-    transports: ["websocket", "polling"],
-    query: { t: Date.now() }, 
-    reconnection: true,
-  });
+    // UPDATED: Using your active ngrok forwarding URL
+    const socket = io("https://stephania-claval-nonimputatively.ngrok-free.dev", {
+      transports: ["websocket", "polling"],
+      reconnection: true,
+      // Adding extra headers to bypass the ngrok browser warning page
+      extraHeaders: {
+        "ngrok-skip-browser-warning": "true"
+      }
+    });
 
-  socket.on("connect", () => {
-    console.log("✅ ENGINE_CONNECTED_SUCCESSFULLY");
-  });
+    socket.on("connect", () => {
+      console.log("✅ ENGINE_CONNECTED_SUCCESSFULLY");
+    });
 
-  socket.on("quantum_update", (payload) => {
-    console.log("📡 SIGNAL_RECEIVED:", payload);
-    setData(payload);
-  });
+    socket.on("quantum_update", (payload) => {
+      console.log("📡 SIGNAL_RECEIVED:", payload);
+      setData(payload);
+    });
 
-  socket.on("connect_error", (err) => {
-    console.log("❌ ATTEMPTING_RECONNECT:", err.message);
-  });
+    socket.on("connect_error", (err) => {
+      console.log("❌ ATTEMPTING_RECONNECT:", err.message);
+    });
 
-  return () => {
-    socket.disconnect();
-  };
-}, []);
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
 
   return data;
 }
